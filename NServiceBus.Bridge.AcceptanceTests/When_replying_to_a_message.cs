@@ -14,7 +14,7 @@ public class When_replying_to_a_message : NServiceBusAcceptanceTest
     public async Task Should_deliver_the_reply_without_explicit_routing()
     {
         var result = await Scenario.Define<Context>()
-            .WithComponent(new BridgeComponent<MsmqTransport, MsmqTransport>(Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right")))
+            .With(Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right"))
             .WithEndpoint<Sender>(c => c.When(s => s.Send(new MyRequest())))
             .WithEndpoint<Receiver>()
             .Done(c => c.RequestReceived && c.ResponseReceived)

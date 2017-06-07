@@ -1,9 +1,21 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTesting.Support;
 using NServiceBus.Bridge;
 using NServiceBus.Transport;
+
+static class BridgeComponentExtensions
+{
+    public static IScenarioWithEndpointBehavior<TContext> With<TContext, TLeft, TRight>(this IScenarioWithEndpointBehavior<TContext> scenario, BridgeConfiguration<TLeft, TRight> config)
+        where TContext : ScenarioContext
+        where TLeft : TransportDefinition, new()
+        where TRight : TransportDefinition, new()
+    {
+        return scenario.WithComponent(new BridgeComponent<TLeft, TRight>(config));
+    }
+}
 
 class BridgeComponent<TLeft, TRight> : IComponentBehavior
     where TLeft : TransportDefinition, new()
