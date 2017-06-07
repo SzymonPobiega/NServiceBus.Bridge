@@ -13,6 +13,7 @@ class ReplyRouter : IRouter
         {
             throw new UnforwardableMessageException("The reply has to contain a 'NServiceBus.Bridge.DestinationAddress' header.");
         }
+        context.Headers.Remove("NServiceBus.Bridge.DestinationAddress");
         var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);
         var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(destinationAddress));
         return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);

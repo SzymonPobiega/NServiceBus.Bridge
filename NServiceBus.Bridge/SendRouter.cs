@@ -32,6 +32,8 @@ class SendRouter : IRouter
             context.Headers["NServiceBus.Bridge.ReplyToAddress"] = replyTo;
         }
         context.Headers[Headers.ReplyToAddress] = dispatcher.TransportAddress;
+        context.Headers.Remove("NServiceBus.Bridge.DestinationEndpoint");
+
         var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);
         var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(address));
         return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);

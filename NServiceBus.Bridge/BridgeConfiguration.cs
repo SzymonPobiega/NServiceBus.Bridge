@@ -8,8 +8,8 @@ namespace NServiceBus.Bridge
         where TLeft : TransportDefinition, new()
         where TRight : TransportDefinition, new()
     {
-        string leftName;
-        string rightName;
+        internal string LeftName;
+        internal string RightName;
         Action<TransportExtensions<TLeft>> leftCustomization;
         Action<TransportExtensions<TRight>> rightCustomization;
         bool autoCreateQueues;
@@ -17,8 +17,8 @@ namespace NServiceBus.Bridge
 
         internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
         {
-            this.leftName = leftName;
-            this.rightName = rightName;
+            this.LeftName = leftName;
+            this.RightName = rightName;
             this.leftCustomization = leftCustomization;
             this.rightCustomization = rightCustomization;
         }
@@ -35,7 +35,7 @@ namespace NServiceBus.Bridge
 
         public IBridge Create()
         {
-            return new Bridge<TLeft,TRight>(leftName, rightName, autoCreateQueues, autoCreateQueuesIdentity, 
+            return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
                 EndpointInstances, new InMemorySubscriptionStorage(), DistributionPolicy, "poison",
                 leftCustomization, rightCustomization);
         }
