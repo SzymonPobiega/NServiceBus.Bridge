@@ -27,6 +27,7 @@ class RampFeature : Feature
 
         context.Pipeline.Register(new SetUltimateDestinationEndpointBehavior(rampSettings.SendRouteTable), "Sets the ultimate destination endpoint on the outgoing messages.");
         context.Pipeline.Register(new ReplyBehavior(), "Copies the actual reply-to address.");
+        context.Pipeline.Register(new SetCorrelationIdBehavior(), "Encodes the reply-to address in the correlation ID.");
         context.Pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable), 
             "Dispatches the subscribe request to the bridge.");
         context.Pipeline.Register(b => new BridgeUnsubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable),

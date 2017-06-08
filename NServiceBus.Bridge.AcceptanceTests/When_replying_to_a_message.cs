@@ -11,7 +11,7 @@ using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 public class When_replying_to_a_message : NServiceBusAcceptanceTest
 {
     [Test]
-    public async Task Should_deliver_the_reply_without_explicit_routing()
+    public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
         var result = await Scenario.Define<Context>()
             .With(Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right"))
@@ -22,18 +22,12 @@ public class When_replying_to_a_message : NServiceBusAcceptanceTest
 
         Assert.IsTrue(result.RequestReceived);
         Assert.IsTrue(result.ResponseReceived);
-        Assert.IsTrue(result.RequestHasBridgeReplyToHeader);
-        Assert.IsFalse(result.RequestHasBridgeDestinationHeader);
-        Assert.IsFalse(result.ResponseHasBridgeDestinationHeader);
     }
 
     class Context : ScenarioContext
     {
         public bool RequestReceived { get; set; }
         public bool ResponseReceived { get; set; }
-        public bool RequestHasBridgeReplyToHeader { get; set; }
-        public bool ResponseHasBridgeDestinationHeader { get; set; }
-        public bool RequestHasBridgeDestinationHeader { get; set; }
     }
 
     class Sender : EndpointConfigurationBuilder
@@ -60,7 +54,6 @@ public class When_replying_to_a_message : NServiceBusAcceptanceTest
             public Task Handle(MyResponse response, IMessageHandlerContext context)
             {
                 scenarioContext.ResponseReceived = true;
-                scenarioContext.ResponseHasBridgeDestinationHeader = context.MessageHeaders.ContainsKey("NServiceBus.Bridge.DestinationAddress");
                 return Task.CompletedTask;
             }
         }
@@ -72,9 +65,8 @@ public class When_replying_to_a_message : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
-                routing.UseBridgeRamp("Right");
-                //No explicit routing needed
+                //No bridge configuration needed for reply
+                c.UseTransport<MsmqTransport>();
             });
         }
 
@@ -90,8 +82,6 @@ public class When_replying_to_a_message : NServiceBusAcceptanceTest
             public Task Handle(MyRequest request, IMessageHandlerContext context)
             {
                 scenarioContext.RequestReceived = true;
-                scenarioContext.RequestHasBridgeReplyToHeader = context.MessageHeaders.ContainsKey("NServiceBus.Bridge.ReplyToAddress");
-                scenarioContext.RequestHasBridgeDestinationHeader = context.MessageHeaders.ContainsKey("NServiceBus.Bridge.DestinationEndpoint");
                 return context.Reply(new MyResponse());
             }
         }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Raw;
@@ -9,13 +10,27 @@ class ReplyRouter : IRouter
 {
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
     {
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationAddress", out string destinationAddress))
+        string replyTo = null;
+        if (!context.Headers.TryGetValue(Headers.CorrelationId, out string correlationId))
         {
-            throw new UnforwardableMessageException("The reply has to contain a 'NServiceBus.Bridge.DestinationAddress' header.");
+            throw new UnforwardableMessageException($"The reply has to contain a '{Headers.CorrelationId}' header set by the bridge ramp when sending out the initial message.");
         }
-        context.Headers.Remove("NServiceBus.Bridge.DestinationAddress");
+
+        correlationId.DecodeTLV((t, v) =>
+        {
+            if (t == "reply-to")
+            {
+                replyTo = v;
+            }
+        });
+
+        if (replyTo == null)
+        {
+            throw new UnforwardableMessageException($"The reply has to contain a '{Headers.CorrelationId}' header set by the bridge ramp when sending out the initial message.");
+        }
+
         var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);
-        var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(destinationAddress));
+        var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(replyTo));
         return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);
     }
 }

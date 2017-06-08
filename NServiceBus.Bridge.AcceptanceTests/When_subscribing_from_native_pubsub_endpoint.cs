@@ -4,34 +4,20 @@ using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
 using NServiceBus.AcceptanceTests.EndpointTemplates;
 using NServiceBus.Bridge;
-using NServiceBus.Features;
 using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
 [TestFixture]
-public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptanceTest
+public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanceTest
 {
-    static string PublisherEndpointName => Conventions.EndpointNamingConvention(typeof(Publisher));
-
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
-        var bridgeConfiguration = Bridge.Between<RabbitMQTransport>("Left", t => t.ConnectionString("host=localhost")).And<MsmqTransport>("Right");
-        bridgeConfiguration.LimitMessageProcessingConcurrencyTo(1); //To ensure when tracer arrives the subscribe request has already been processed.
-
         var result = await Scenario.Define<Context>()
-            .With(bridgeConfiguration)
+            .With(Bridge.Between<MsmqTransport>("Left").And<RabbitMQTransport>("Right", t => t.ConnectionString("host=localhost")))
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))
-            .WithEndpoint<BaseEventSubscriber>(c => c.When(async s =>
-            {
-                await s.Subscribe<MyBaseEvent>().ConfigureAwait(false);
-                await s.Send(new TracerMessage()).ConfigureAwait(false);
-            }))
-            .WithEndpoint<DerivedEventSubscriber>(c => c.When(async s =>
-            {
-                await s.Subscribe<MyDerivedEvent>().ConfigureAwait(false);
-                await s.Send(new TracerMessage()).ConfigureAwait(false);
-            }))
+            .WithEndpoint<BaseEventSubscriber>()
+            .WithEndpoint<DerivedEventSubscriber>()
             .Done(c => c.BaseEventDelivered && c.DerivedEventDeilvered)
             .Run();
 
@@ -44,7 +30,7 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
         public bool BaseEventDelivered { get; set; }
         public bool DerivedEventDeilvered { get; set; }
         public bool BaseEventSubscribed { get; set; }
-        public bool DerivedEventSubscribed { get; set; } = true;
+        public bool DerivedEventSubscribed { get; set; }
     }
 
     class Publisher : EndpointConfigurationBuilder
@@ -54,31 +40,20 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost");
+                c.UseTransport<MsmqTransport>();
+
+                c.OnEndpointSubscribed<Context>((args, context) =>
+                {
+                    if (args.MessageType.Contains("MyBaseEvent"))
+                    {
+                        context.BaseEventSubscribed = true;
+                    }
+                    else
+                    {
+                        context.DerivedEventSubscribed = true;
+                    }
+                });
             });
-        }
-
-        class TracerHandler : IHandleMessages<TracerMessage>
-        {
-            Context scenarioContext;
-
-            public TracerHandler(Context scenarioContext)
-            {
-                this.scenarioContext = scenarioContext;
-            }
-
-            public Task Handle(TracerMessage message, IMessageHandlerContext context)
-            {
-                if (context.MessageHeaders[Headers.OriginatingEndpoint].Contains("BaseEventSubscriber"))
-                {
-                    scenarioContext.BaseEventSubscribed = true;
-                }
-                else
-                {
-                    scenarioContext.DerivedEventSubscribed = true;
-                }
-                return Task.CompletedTask;
-            }
         }
     }
 
@@ -88,11 +63,9 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                c.DisableFeature<AutoSubscribe>();
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
                 var ramp = routing.UseBridgeRamp("Right");
-                ramp.RegisterPublisher(typeof(MyBaseEvent), PublisherEndpointName);
-                ramp.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
+                ramp.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
 
@@ -119,11 +92,9 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                c.DisableFeature<AutoSubscribe>();
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
                 var ramp = routing.UseBridgeRamp("Right");
-                ramp.RegisterPublisher(typeof(MyDerivedEvent), PublisherEndpointName);
-                ramp.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
+                ramp.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
 
@@ -149,10 +120,6 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
     }
 
     class MyDerivedEvent : MyBaseEvent
-    {
-    }
-
-    class TracerMessage : IMessage
     {
     }
 }

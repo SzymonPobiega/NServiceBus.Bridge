@@ -11,7 +11,7 @@ using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAcceptanceTest
 {
     [Test]
-    public async Task Should_deliver_the_reply_without_explicit_routing()
+    public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var result = await Scenario.Define<Context>()
             .With(Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right"))
@@ -39,12 +39,12 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                //No publisher-side config required
+                //No bridge configuration needed for publisher
                 c.UseTransport<MsmqTransport>();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
-                    if (args.MessageType.Contains("When_publishing_from_message_driven_pubsub_endpoint+MyBaseEvent"))
+                    if (args.MessageType.Contains("MyBaseEvent"))
                     {
                         context.BaseEventSubscribed = true;
                     }
