@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Pipeline;
-using NServiceBus.Transport;
 
 class SetCorrelationIdBehavior : Behavior<IOutgoingPhysicalMessageContext>
 {

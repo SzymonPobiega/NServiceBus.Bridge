@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Security.Policy;
 using NServiceBus;
 using NServiceBus.Features;
 using NServiceBus.Routing;
@@ -26,7 +25,6 @@ class RampFeature : Feature
         publishers.AddOrReplacePublishers("Bridge", rampSettings.PublisherTable.Select(kvp => new PublisherTableEntry(kvp.Key, publisherAddress)).ToList());
 
         context.Pipeline.Register(new SetUltimateDestinationEndpointBehavior(rampSettings.SendRouteTable), "Sets the ultimate destination endpoint on the outgoing messages.");
-        context.Pipeline.Register(new ReplyBehavior(), "Copies the actual reply-to address.");
         context.Pipeline.Register(new SetCorrelationIdBehavior(), "Encodes the reply-to address in the correlation ID.");
         context.Pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable), 
             "Dispatches the subscribe request to the bridge.");

@@ -7,7 +7,6 @@ using NServiceBus.Logging;
 using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
-using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 using NServiceBus.Unicast.Transport;
 

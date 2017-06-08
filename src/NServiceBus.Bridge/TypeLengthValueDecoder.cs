@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using NServiceBus.Bridge;
 
 static class TypeLengthValueDecoder
