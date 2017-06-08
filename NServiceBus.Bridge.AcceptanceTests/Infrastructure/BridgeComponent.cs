@@ -30,6 +30,7 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
 
     public Task<ComponentRunner> CreateRunner(RunDescriptor run)
     {
+        config.AutoCreateQueues();
         var bridge = config.Create();
         
         return Task.FromResult<ComponentRunner>(new Runner(bridge, $"{config.LeftName}<->{config.RightName}"));

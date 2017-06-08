@@ -30,9 +30,7 @@ class Bridge<TLeft, TRight> : IBridge
     IRouter leftSubscribeRouter;
     IRouter rightSubscribeRouter;
 
-    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, 
-        EndpointInstances endpointInstances, ISubscriptionStorage subscriptionStorage, IDistributionPolicy distributionPolicy, string poisonQueue,
-        Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
+    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, ISubscriptionStorage subscriptionStorage, IDistributionPolicy distributionPolicy, string poisonQueue, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency)
     {
         this.endpointInstances = endpointInstances;
         this.subscriptionStorage = subscriptionStorage;
@@ -56,6 +54,12 @@ class Bridge<TLeft, TRight> : IBridge
         if (autoCreateQueues)
         {
             rightConfig.AutoCreateQueue(autoCreateQueuesIdentity);
+        }
+
+        if (maximumConcurrency.HasValue)
+        {
+            leftConfig.LimitMessageProcessingConcurrencyTo(1);
+            rightConfig.LimitMessageProcessingConcurrencyTo(1);
         }
     }
 

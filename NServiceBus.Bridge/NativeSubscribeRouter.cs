@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
@@ -36,12 +37,14 @@ class NativeSubscribeRouter : SubscribeRouter
         var nameAndNamespace = parts[0];
         var assembly = parts[1];
 
+
         ModuleBuilder moduleBuilder;
         lock (assemblies)
         {
             if (!assemblies.TryGetValue(assembly, out moduleBuilder))
             {
-                var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(assembly), AssemblyBuilderAccess.ReflectionOnly);
+                var assemblyName = new AssemblyName(assembly);
+                var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.ReflectionOnly);
                 moduleBuilder = assemblyBuilder.DefineDynamicModule(assembly, assembly + ".dll");
                 assemblies[assembly] = moduleBuilder;
             }
@@ -51,7 +54,15 @@ class NativeSubscribeRouter : SubscribeRouter
         {
             if (!types.TryGetValue(messageType, out result))
             {
-                var typeBuilder = moduleBuilder.DefineType(nameAndNamespace, TypeAttributes.Public);
+                var nestedParts = nameAndNamespace.Split(new[] { '+' }, StringSplitOptions.RemoveEmptyEntries);
+
+                var typeBuilder = GetRootTypeBuilder(moduleBuilder, nestedParts[0]);
+
+                for (var i = 1; i < nestedParts.Length; i++)
+                {
+                    var path = string.Join("+", nestedParts.Take(i+1));
+                    typeBuilder = GetNestedTypeBuilder(typeBuilder, nestedParts[i], path);
+                }
                 result = typeBuilder.CreateType();
                 types[messageType] = result;
             }
@@ -59,6 +70,33 @@ class NativeSubscribeRouter : SubscribeRouter
         return result;
     }
 
+    TypeBuilder GetRootTypeBuilder(ModuleBuilder moduleBuilder, string name)
+    {
+        if (typeBuilders.TryGetValue(name, out TypeBuilder builder))
+        {
+            return builder;
+        }
+
+        builder = moduleBuilder.DefineType(name, TypeAttributes.Public);
+        typeBuilders[name] = builder;
+        builder.CreateType();
+        return builder;
+    }
+
+    TypeBuilder GetNestedTypeBuilder(TypeBuilder typeBuilder, string name, string path)
+    {
+        if (typeBuilders.TryGetValue(path, out TypeBuilder builder))
+        {
+            return builder;
+        }
+
+        builder = typeBuilder.DefineNestedType(name);
+        typeBuilders[path] = builder;
+        builder.CreateType();
+        return builder;
+    }
+
     Dictionary<string, ModuleBuilder> assemblies = new Dictionary<string, ModuleBuilder>();
     Dictionary<string, Type> types = new Dictionary<string, Type>();
+    Dictionary<string, TypeBuilder> typeBuilders = new Dictionary<string, TypeBuilder>();
 }

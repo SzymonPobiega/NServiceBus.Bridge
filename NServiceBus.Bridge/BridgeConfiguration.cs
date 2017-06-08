@@ -14,6 +14,7 @@ namespace NServiceBus.Bridge
         Action<TransportExtensions<TRight>> rightCustomization;
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
+        int? maximumConcurrency;
 
         internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
         {
@@ -22,11 +23,16 @@ namespace NServiceBus.Bridge
             this.leftCustomization = leftCustomization;
             this.rightCustomization = rightCustomization;
         }
-
+        
         public void AutoCreateQueues(string identity = null)
         {
             autoCreateQueues = true;
             autoCreateQueuesIdentity = identity;
+        }
+
+        public void LimitMessageProcessingConcurrencyTo(int maximumConcurrency)
+        {
+            this.maximumConcurrency = maximumConcurrency;
         }
 
         public DistributionPolicy DistributionPolicy { get; } = new DistributionPolicy();
@@ -37,7 +43,7 @@ namespace NServiceBus.Bridge
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
                 EndpointInstances, new InMemorySubscriptionStorage(), DistributionPolicy, "poison",
-                leftCustomization, rightCustomization);
+                leftCustomization, rightCustomization, maximumConcurrency);
         }
     }
 }
