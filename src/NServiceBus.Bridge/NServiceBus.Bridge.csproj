@@ -2,11 +2,14 @@
   <PropertyGroup>
     <TargetFramework>net46</TargetFramework>
   </PropertyGroup>
+  <PropertyGroup>
+    <OutputPath>..\..\binaries</OutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="GitVersionTask" Version="3.6.5" />
     <PackageReference Include="NServiceBus" Version="6.3.3" />
     <PackageReference Include="NServiceBus.Raw" Version="1.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
+    <PackageReference Include="NuGetPackager" Version="0.6.3" />
   </ItemGroup>
 </Project>
