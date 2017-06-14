@@ -9,6 +9,8 @@ class RampFeature : Feature
 {
     protected override void Setup(FeatureConfigurationContext context)
     {
+        var transportInfra = context.Settings.Get<TransportInfrastructure>();
+        var nativePubSub = transportInfra.OutboundRoutingPolicy.Publishes == OutboundRoutingType.Multicast;
         var rampSettings = context.Settings.Get<RampSettings>();
         var unicastRouteTable = context.Settings.Get<UnicastRoutingTable>();
         var route = UnicastRoute.CreateFromPhysicalAddress(rampSettings.BridgeAddress);
@@ -26,9 +28,9 @@ class RampFeature : Feature
 
         context.Pipeline.Register(new SetUltimateDestinationEndpointBehavior(rampSettings.SendRouteTable), "Sets the ultimate destination endpoint on the outgoing messages.");
         context.Pipeline.Register(new SetCorrelationIdBehavior(), "Encodes the reply-to address in the correlation ID.");
-        context.Pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable), 
+        context.Pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable, nativePubSub), 
             "Dispatches the subscribe request to the bridge.");
-        context.Pipeline.Register(b => new BridgeUnsubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable),
+        context.Pipeline.Register(b => new BridgeUnsubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), rampSettings.BridgeAddress, b.Build<IDispatchMessages>(), rampSettings.PublisherTable, nativePubSub),
             "Dispatches the unsubscribe request to the bridge.");
     }
 }

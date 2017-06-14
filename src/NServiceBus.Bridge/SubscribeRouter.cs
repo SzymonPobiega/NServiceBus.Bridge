@@ -1,21 +1,16 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
+using NServiceBus.Extensibility;
 using NServiceBus.Raw;
 using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
-abstract class SubscribeRouter : IRouter
+
+class SubscribeRouter
 {
-    ISubscriptionStorage subscriptionStorage;
-
-    protected SubscribeRouter(ISubscriptionStorage subscriptionStorage)
-    {
-        this.subscriptionStorage = subscriptionStorage;
-    }
-
-    public async Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    public static async Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher, ISubscriptionForwarder forwarder, ISubscriptionStorage subscriptionStorage)
     {
         var messageTypeString = GetSubscriptionMessageTypeFrom(context);
 
@@ -56,19 +51,16 @@ abstract class SubscribeRouter : IRouter
         var messageType = new MessageType(messageTypeString);
         if (intent == MessageIntentEnum.Subscribe)
         {
-            await subscriptionStorage.Subscribe(subscriber, messageType, context.Extensions).ConfigureAwait(false);
-            await ForwardSubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
+            await subscriptionStorage.Subscribe(subscriber, messageType, new ContextBag()).ConfigureAwait(false);
+            await forwarder.ForwardSubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
         }
         else
         {
-            await subscriptionStorage.Unsubscribe(subscriber, messageType, context.Extensions).ConfigureAwait(false);
-            await ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
+            await subscriptionStorage.Unsubscribe(subscriber, messageType, new ContextBag()).ConfigureAwait(false);
+            await forwarder.ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
         }
     }
-
-    protected abstract Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher);
-    protected abstract Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher);
-
+    
     static string GetSubscriptionMessageTypeFrom(MessageContext msg)
     {
         msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out string value);

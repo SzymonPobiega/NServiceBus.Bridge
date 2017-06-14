@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using NServiceBus;
 using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTesting.Support;
 using NServiceBus.Bridge;
@@ -29,7 +30,7 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
 
     public Task<ComponentRunner> CreateRunner(RunDescriptor run)
     {
-        config.UseSubscriptionStorage(new InMemorySubscriptionStorage());
+        config.UseSubscriptionPersistece<InMemoryPersistence>(c => { });
         config.AutoCreateQueues();
         var bridge = config.Create();
         
