@@ -29,6 +29,7 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
 
     public Task<ComponentRunner> CreateRunner(RunDescriptor run)
     {
+        config.UseSubscriptionStorage(new InMemorySubscriptionStorage());
         config.AutoCreateQueues();
         var bridge = config.Create();
         

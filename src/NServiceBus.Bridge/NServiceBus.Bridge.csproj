@@ -5,7 +5,24 @@
   <PropertyGroup>
     <OutputPath>..\..\binaries</OutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RootNamespace>NServiceBus.Bridge</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="SubscriptionStorage\Scripts\Create_MsSqlServer.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Create_MySql.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Create_Oracle.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_MsSqlServer.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_MySql.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_Oracle.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_MsSqlServer.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_MySql.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_Oracle.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_MsSqlServer.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_MySql.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_Oracle.sql" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="3.6.5" />
     <PackageReference Include="NServiceBus" Version="6.3.3" />
