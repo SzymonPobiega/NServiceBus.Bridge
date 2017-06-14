@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using NServiceBus;
@@ -13,6 +14,18 @@ static class BridgeComponentExtensions
         where TLeft : TransportDefinition, new()
         where TRight : TransportDefinition, new()
     {
+        return scenario.WithComponent(new BridgeComponent<TLeft, TRight>(() =>
+        {
+            config.UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+            return config;
+        }));
+    }
+
+    public static IScenarioWithEndpointBehavior<TContext> With<TContext, TLeft, TRight>(this IScenarioWithEndpointBehavior<TContext> scenario, Func<BridgeConfiguration<TLeft, TRight>> config)
+        where TContext : ScenarioContext
+        where TLeft : TransportDefinition, new()
+        where TRight : TransportDefinition, new()
+    {
         return scenario.WithComponent(new BridgeComponent<TLeft, TRight>(config));
     }
 }
@@ -23,14 +36,13 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
 {
     BridgeConfiguration<TLeft, TRight> config;
 
-    public BridgeComponent(BridgeConfiguration<TLeft, TRight> config)
+    public BridgeComponent(Func<BridgeConfiguration<TLeft, TRight>> config)
     {
-        this.config = config;
+        this.config = config();
     }
 
     public Task<ComponentRunner> CreateRunner(RunDescriptor run)
     {
-        config.UseSubscriptionPersistece<InMemoryPersistence>(c => { });
         config.AutoCreateQueues();
         var bridge = config.Create();
         

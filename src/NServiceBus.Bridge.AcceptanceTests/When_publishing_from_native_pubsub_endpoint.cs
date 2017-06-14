@@ -21,15 +21,15 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
 
         var result = await Scenario.Define<Context>()
             .With(bridgeConfiguration)
-            .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))
+            .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent1())))
             .WithEndpoint<BaseEventSubscriber>(c => c.When(async s =>
             {
-                await s.Subscribe<MyBaseEvent>().ConfigureAwait(false);
+                await s.Subscribe<MyBaseEvent1>().ConfigureAwait(false);
                 await s.Send(new TracerMessage()).ConfigureAwait(false);
             }))
             .WithEndpoint<DerivedEventSubscriber>(c => c.When(async s =>
             {
-                await s.Subscribe<MyDerivedEvent>().ConfigureAwait(false);
+                await s.Subscribe<MyDerivedEvent1>().ConfigureAwait(false);
                 await s.Send(new TracerMessage()).ConfigureAwait(false);
             }))
             .Done(c => c.BaseEventDelivered && c.DerivedEventDeilvered)
@@ -91,12 +91,12 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
                 c.DisableFeature<AutoSubscribe>();
                 var routing = c.UseTransport<MsmqTransport>().Routing();
                 var ramp = routing.UseBridgeRamp("Right");
-                ramp.RegisterPublisher(typeof(MyBaseEvent), PublisherEndpointName);
+                ramp.RegisterPublisher(typeof(MyBaseEvent1), PublisherEndpointName);
                 ramp.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
             });
         }
 
-        class BaseEventHandler : IHandleMessages<MyBaseEvent>
+        class BaseEventHandler : IHandleMessages<MyBaseEvent1>
         {
             Context scenarioContext;
 
@@ -105,7 +105,7 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
                 this.scenarioContext = scenarioContext;
             }
 
-            public Task Handle(MyBaseEvent message, IMessageHandlerContext context)
+            public Task Handle(MyBaseEvent1 message, IMessageHandlerContext context)
             {
                 scenarioContext.BaseEventDelivered = true;
                 return Task.CompletedTask;
@@ -122,12 +122,12 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
                 c.DisableFeature<AutoSubscribe>();
                 var routing = c.UseTransport<MsmqTransport>().Routing();
                 var ramp = routing.UseBridgeRamp("Right");
-                ramp.RegisterPublisher(typeof(MyDerivedEvent), PublisherEndpointName);
+                ramp.RegisterPublisher(typeof(MyDerivedEvent1), PublisherEndpointName);
                 ramp.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
             });
         }
 
-        class DerivedEventHandler : IHandleMessages<MyDerivedEvent>
+        class DerivedEventHandler : IHandleMessages<MyDerivedEvent1>
         {
             Context scenarioContext;
 
@@ -136,7 +136,7 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
                 this.scenarioContext = scenarioContext;
             }
 
-            public Task Handle(MyDerivedEvent message, IMessageHandlerContext context)
+            public Task Handle(MyDerivedEvent1 message, IMessageHandlerContext context)
             {
                 scenarioContext.DerivedEventDeilvered = true;
                 return Task.CompletedTask;
@@ -144,11 +144,11 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
         }
     }
 
-    class MyBaseEvent : IEvent
+    class MyBaseEvent1 : IEvent
     {
     }
 
-    class MyDerivedEvent : MyBaseEvent
+    class MyDerivedEvent1 : MyBaseEvent1
     {
     }
 
