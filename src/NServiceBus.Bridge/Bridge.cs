@@ -63,8 +63,8 @@ class Bridge<TLeft, TRight> : IBridge
 
         if (maximumConcurrency.HasValue)
         {
-            leftConfig.LimitMessageProcessingConcurrencyTo(1);
-            rightConfig.LimitMessageProcessingConcurrencyTo(1);
+            leftConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
+            rightConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
         }
     }
 
