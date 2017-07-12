@@ -15,6 +15,7 @@ namespace NServiceBus.Bridge
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
+        string poisonQueue;
 
         internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
         {
@@ -35,6 +36,11 @@ namespace NServiceBus.Bridge
             this.maximumConcurrency = maximumConcurrency;
         }
 
+        public void SetPoisonQueue(string poisonQueue)
+        {
+            this.poisonQueue = poisonQueue;
+        }
+
         public DistributionPolicy DistributionPolicy { get; } = new DistributionPolicy();
 
         public EndpointInstances EndpointInstances { get; } = new EndpointInstances();
@@ -42,7 +48,7 @@ namespace NServiceBus.Bridge
         public IBridge Create()
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                EndpointInstances, new InMemorySubscriptionStorage(), DistributionPolicy, "poison",
+                EndpointInstances, new InMemorySubscriptionStorage(), DistributionPolicy, poisonQueue ?? "poison",
                 leftCustomization, rightCustomization, maximumConcurrency);
         }
     }
