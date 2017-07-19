@@ -48,7 +48,7 @@ class Bridge<TLeft, TRight> : IBridge
             leftConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues, autoCreateQueuesIdentity);
+        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure);
 
         rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure), poisonQueue);
         var rightTransport = rightConfig.UseTransport<TRight>();
@@ -59,7 +59,7 @@ class Bridge<TLeft, TRight> : IBridge
             rightConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure, autoCreateQueues, autoCreateQueuesIdentity);
+        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure);
 
         if (maximumConcurrency.HasValue)
         {
@@ -68,7 +68,7 @@ class Bridge<TLeft, TRight> : IBridge
         }
     }
 
-    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues, string autoCreateQueuesIdentity)
+    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure)
         where TTransport : TransportDefinition, new()
     {
         var dispatcherConfig = new EndpointConfiguration(name);
@@ -83,10 +83,6 @@ class Bridge<TLeft, TRight> : IBridge
         SetTransportSpecificFlags(settings, poisonQueue);
         transportCustomization?.Invoke(transport);
         subscriptionPersistenceConfig?.Invoke(dispatcherConfig);
-        if (autoCreateQueues)
-        {
-            dispatcherConfig.EnableInstallers(autoCreateQueuesIdentity);
-        }
         dispatcherConfig.AssemblyScanner().ScanAppDomainAssemblies = false;
         dispatcherConfig.AssemblyScanner().ExcludeAssemblies("NServiceBus.AcceptanceTesting");
         return dispatcherConfig;

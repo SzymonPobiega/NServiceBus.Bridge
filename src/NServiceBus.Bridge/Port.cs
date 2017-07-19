@@ -8,44 +8,34 @@ using NServiceBus.Routing;
 using NServiceBus.Settings;
 using NServiceBus.Transport;
 
-class Hub
-{
-
-}
-
-class SpokeConfig<T>
+class Port<T> : IPort
     where T : TransportDefinition, new()
 {
     public string Name { get; }
-    public Action<TransportExtensions<T>> TransportCustomization { get; }
-    public Action<EndpointConfiguration> PersistenceCustomization { get; }
-    public EndpointInstances EndpointInstances { get; }
-    public IDistributionPolicy DistributionPolicy { get; }
-
-}
-
-class Spoke<T>
-    where T : TransportDefinition, new()
-{
-    public Spoke(SpokeConfig<T> config, RuntimeTypeGenerator typeGenerator, string poisonQueue, bool autoCreateQueues, string autoCreateQueuesIdentity,
-        Func<MessageContext, PubSubInfrastructure, Task> onMessage)
+    public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, bool autoCreateQueues, string autoCreateQueuesIdentity)
     {
-        pubSubInfra = new PubSubInfrastructure(config.EndpointInstances, config.DistributionPolicy, typeGenerator);
+        Name = name;
+        sendRouter = new SendRouter(endpointInstances, distributionPolicy, Name);
+        replyRouter = new ReplyRouter();
+        pubSubInfra = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
 
-        rawConfig = RawEndpointConfiguration.Create(config.Name, (context, _) => onMessage(context, pubSubInfra), poisonQueue);
+        rawConfig = RawEndpointConfiguration.Create(name, (context, _) => onMessage(context, pubSubInfra), poisonQueue);
 
         var transport = rawConfig.UseTransport<T>();
         SetTransportSpecificFlags(transport.GetSettings(), poisonQueue);
-        config.TransportCustomization?.Invoke(transport);
+        transportCustomization?.Invoke(transport);
         if (autoCreateQueues)
         {
             rawConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
-
-        routerEndpointConfig = CreateDispatcherConfig(config.Name, config.PersistenceCustomization, poisonQueue, config.TransportCustomization, pubSubInfra, autoCreateQueues, autoCreateQueuesIdentity);
+        if (maximumConcurrency.HasValue)
+        {
+            rawConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
+        }
+        routerEndpointConfig = CreatePubSubRoutingEndpoint(name, subscriptionPersistenceConfig, poisonQueue, transportCustomization, pubSubInfra);
     }
 
-    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues, string autoCreateQueuesIdentity)
+    static EndpointConfiguration CreatePubSubRoutingEndpoint<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure)
         where TTransport : TransportDefinition, new()
     {
         var dispatcherConfig = new EndpointConfiguration(name);
@@ -60,10 +50,7 @@ class Spoke<T>
         SetTransportSpecificFlags(settings, poisonQueue);
         transportCustomization?.Invoke(transport);
         subscriptionPersistenceConfig?.Invoke(dispatcherConfig);
-        if (autoCreateQueues)
-        {
-            dispatcherConfig.EnableInstallers(autoCreateQueuesIdentity);
-        }
+
         dispatcherConfig.AssemblyScanner().ScanAppDomainAssemblies = false;
         dispatcherConfig.AssemblyScanner().ExcludeAssemblies("NServiceBus.AcceptanceTesting");
         return dispatcherConfig;
@@ -86,6 +73,10 @@ class Spoke<T>
                 return SubscribeRouter.Route(context, intent, sender, pubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage);
             case MessageIntentEnum.Publish:
                 return pubSubInfra.PublishRouter.Route(context, intent, sender);
+            case MessageIntentEnum.Send:
+                return sendRouter.Route(context, intent, sender);
+            case MessageIntentEnum.Reply:
+                return replyRouter.Route(context, intent, sender);
             default:
                 throw new UnforwardableMessageException("Unroutable message intent: " + intent);
         }
@@ -101,30 +92,52 @@ class Spoke<T>
         return messageIntent;
     }
 
-    public Task Initialize()
+    public async Task Initialize(Func<MessageContext, PubSubInfrastructure, Task> onMessage)
     {
-        
+        this.onMessage = onMessage;
+        pubSubRoutingEndpoint = await Endpoint.Start(routerEndpointConfig).ConfigureAwait(false);
+        sender = await RawEndpoint.Create(rawConfig).ConfigureAwait(false);
     }
 
-    public Task StartReceiving()
+    public async Task StartReceiving()
     {
-        
+        receiver = await sender.Start().ConfigureAwait(false);
     }
 
-    public Task StopReceiving()
+    public async Task StopReceiving()
     {
-        
+        if (pubSubRoutingEndpoint != null)
+        {
+            await pubSubRoutingEndpoint.Stop().ConfigureAwait(false);
+        }
+        if (receiver != null)
+        {
+            stoppable = await receiver.StopReceiving().ConfigureAwait(false);
+        }
+        else
+        {
+            stoppable = null;
+        }
     }
 
-    public Task Stop()
+    public async Task Stop()
     {
+        if (stoppable != null)
+        {
+            await stoppable.Stop().ConfigureAwait(false);
+            stoppable = null;
+        }
     }
 
-    IEndpointInstance router;
+    Func<MessageContext, PubSubInfrastructure, Task> onMessage;
+    IEndpointInstance pubSubRoutingEndpoint;
     IReceivingRawEndpoint receiver;
     IStartableRawEndpoint sender;
+    IStoppableRawEnedpoint stoppable;
 
     RawEndpointConfiguration rawConfig;
     EndpointConfiguration routerEndpointConfig;
     PubSubInfrastructure pubSubInfra;
+    SendRouter sendRouter;
+    ReplyRouter replyRouter;
 }

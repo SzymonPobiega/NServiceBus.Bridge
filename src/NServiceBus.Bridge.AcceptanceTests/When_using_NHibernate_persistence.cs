@@ -73,7 +73,7 @@ public class When_using_NHibernate_persistence : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.UseBridgeRamp("Right");
+                var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
@@ -102,7 +102,7 @@ public class When_using_NHibernate_persistence : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.UseBridgeRamp("Right");
+                var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }

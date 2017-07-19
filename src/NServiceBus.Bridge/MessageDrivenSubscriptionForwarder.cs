@@ -46,7 +46,6 @@ class MessageDrivenSubscriptionForwarder : ISubscriptionForwarder
             subscriptionMessage.Headers[Headers.ReplyToAddress] = dispatcher.TransportAddress;
             subscriptionMessage.Headers[Headers.SubscriberTransportAddress] = dispatcher.TransportAddress;
             subscriptionMessage.Headers[Headers.SubscriberEndpoint] = dispatcher.EndpointName;
-            subscriptionMessage.Headers["NServiceBus.Bridge.DestinationEndpoint"] = publisherEndpoint;
             subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
             subscriptionMessage.Headers[Headers.NServiceBusVersion] = "6.3.1"; //The code has been copied from 6.3.1
 

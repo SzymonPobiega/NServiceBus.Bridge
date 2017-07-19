@@ -10,13 +10,14 @@ using NServiceBus.Unicast.Transport;
 
 class BridgeUnsubscribeBehavior : Behavior<IUnsubscribeContext>
 {
-    public BridgeUnsubscribeBehavior(string subscriberAddress, string subscriberEndpoint, string bridgeAddress, IDispatchMessages dispatcher, Dictionary<Type, string> publisherTable, bool invokeTerminator)
+    public BridgeUnsubscribeBehavior(string subscriberAddress, string subscriberEndpoint, string bridgeAddress, IDispatchMessages dispatcher, Dictionary<Type, string> publisherTable, Dictionary<string, string> portTable, bool invokeTerminator)
     {
         this.subscriberAddress = subscriberAddress;
         this.subscriberEndpoint = subscriberEndpoint;
         this.bridgeAddress = bridgeAddress;
         this.dispatcher = dispatcher;
         this.publisherTable = publisherTable;
+        this.portTable = portTable;
         this.invokeTerminator = invokeTerminator;
     }
 
@@ -38,6 +39,11 @@ class BridgeUnsubscribeBehavior : Behavior<IUnsubscribeContext>
             subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
             subscriptionMessage.Headers[Headers.NServiceBusVersion] = "6.3.1"; //The code has been copied from 6.3.1
 
+            if (portTable.TryGetValue(publisherEndpoint, out string publisherPort))
+            {
+                subscriptionMessage.Headers["NServiceBus.Bridge.DestinationPort"] = publisherPort;
+            }
+
             var transportOperation = new TransportOperation(subscriptionMessage, new UnicastAddressTag(bridgeAddress));
             var transportTransaction = context.Extensions.GetOrCreate<TransportTransaction>();
             await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, context.Extensions).ConfigureAwait(false);
@@ -50,6 +56,7 @@ class BridgeUnsubscribeBehavior : Behavior<IUnsubscribeContext>
 
     IDispatchMessages dispatcher;
     Dictionary<Type, string> publisherTable;
+    Dictionary<string, string> portTable;
     bool invokeTerminator;
     string subscriberAddress;
     string subscriberEndpoint;

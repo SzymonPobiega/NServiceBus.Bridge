@@ -64,7 +64,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
-                var ramp = routing.UseBridgeRamp("Right");
+                var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyBaseEvent2), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
@@ -93,7 +93,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
-                var ramp = routing.UseBridgeRamp("Right");
+                var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyDerivedEvent2), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
