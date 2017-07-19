@@ -1,69 +1,100 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Configuration.AdvanceExtensibility;
 using NServiceBus.Raw;
 using NServiceBus.Routing;
+using NServiceBus.Settings;
 using NServiceBus.Transport;
-using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
 class Bridge<TLeft, TRight> : IBridge
     where TLeft : TransportDefinition, new()
     where TRight : TransportDefinition, new()
 {
-    EndpointInstances endpointInstances;
-    ISubscriptionStorage subscriptionStorage;
-    IStartableRawEndpoint leftStartable;
-    IStartableRawEndpoint rightStartable;
+    IEndpointInstance leftDispatcher;
+    IEndpointInstance rightDispatcher;
 
     IReceivingRawEndpoint rightEndpoint;
+    IStartableRawEndpoint rightStartable;
     IReceivingRawEndpoint leftEndpoint;
+    IStartableRawEndpoint leftStartable;
 
     RawEndpointConfiguration leftConfig;
+    EndpointConfiguration leftDispatcherConfig;
     RawEndpointConfiguration rightConfig;
+    EndpointConfiguration rightDispatcherConfig;
 
-    IRouter publishRouter;
     IRouter sendRouter;
     IRouter replyRouter;
-    IRouter leftSubscribeRouter;
-    IRouter rightSubscribeRouter;
 
-    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, ISubscriptionStorage subscriptionStorage, IDistributionPolicy distributionPolicy, string poisonQueue, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency)
+    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, 
+        Action<EndpointConfiguration> subscriptionPersistenceConfig, IDistributionPolicy distributionPolicy, string poisonQueue, 
+        Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency)
     {
-        this.endpointInstances = endpointInstances;
-        this.subscriptionStorage = subscriptionStorage;
-        publishRouter = new PublishRouter(subscriptionStorage, distributionPolicy);
         sendRouter = new SendRouter(endpointInstances, distributionPolicy);
         replyRouter = new ReplyRouter();
 
-        leftConfig = RawEndpointConfiguration.Create(leftName, (context, _) => Forward(context, rightStartable, rightSubscribeRouter), poisonQueue);
+        var typeGenerator = new RuntimeTypeGenerator();
+        var leftPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
+        var rightPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
+
+        leftConfig = RawEndpointConfiguration.Create(leftName, (context, _) => Forward(context, rightStartable, leftPubSubInfrastructure, rightPubSubInfrastructure), poisonQueue);
         var leftTransport = leftConfig.UseTransport<TLeft>();
-        leftTransport.GetSettings().Set("errorQueue", poisonQueue);
+        SetTransportSpecificFlags(leftTransport.GetSettings(), poisonQueue);
         leftCustomization?.Invoke(leftTransport);
         if (autoCreateQueues)
         {
             leftConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => Forward(context, leftStartable, leftSubscribeRouter), poisonQueue);
+        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure);
+
+        rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure), poisonQueue);
         var rightTransport = rightConfig.UseTransport<TRight>();
-        rightTransport.GetSettings().Set("errorQueue", poisonQueue);
+        SetTransportSpecificFlags(rightTransport.GetSettings(), poisonQueue);
         rightCustomization?.Invoke(rightTransport);
         if (autoCreateQueues)
         {
             rightConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
+        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure);
+
         if (maximumConcurrency.HasValue)
         {
-            leftConfig.LimitMessageProcessingConcurrencyTo(1);
-            rightConfig.LimitMessageProcessingConcurrencyTo(1);
+            leftConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
+            rightConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
         }
     }
 
-    Task Forward(MessageContext context, IRawEndpoint dispatcher, IRouter subscribeRouter)
+    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure)
+        where TTransport : TransportDefinition, new()
+    {
+        var dispatcherConfig = new EndpointConfiguration(name);
+        dispatcherConfig.SendOnly();
+        dispatcherConfig.EnableFeature<PubSubInfrastructureBuilderFeature>();
+        dispatcherConfig.RegisterComponents(c =>
+        {
+            c.RegisterSingleton(pubSubInfrastructure);
+        });
+        var transport = dispatcherConfig.UseTransport<TTransport>();
+        var settings = transport.GetSettings();
+        SetTransportSpecificFlags(settings, poisonQueue);
+        transportCustomization?.Invoke(transport);
+        subscriptionPersistenceConfig?.Invoke(dispatcherConfig);
+        dispatcherConfig.AssemblyScanner().ScanAppDomainAssemblies = false;
+        dispatcherConfig.AssemblyScanner().ExcludeAssemblies("NServiceBus.AcceptanceTesting");
+        return dispatcherConfig;
+    }
+
+    static void SetTransportSpecificFlags(SettingsHolder settings, string poisonQueue)
+    {
+        settings.Set("errorQueue", poisonQueue);
+        settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
+    }
+
+    Task Forward(MessageContext context, IRawEndpoint dispatcher, PubSubInfrastructure inboundPubSubInfra, PubSubInfrastructure outboundPubSubInfra)
     {
         var intent = GetMesssageIntent(context);
 
@@ -71,18 +102,18 @@ class Bridge<TLeft, TRight> : IBridge
         {
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
-                return subscribeRouter.Route(context, intent, dispatcher);
+                return SubscribeRouter.Route(context, intent, dispatcher, outboundPubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage);
             case MessageIntentEnum.Send:
                 return sendRouter.Route(context, intent, dispatcher);
             case MessageIntentEnum.Publish:
-                return publishRouter.Route(context, intent, dispatcher);
+                return outboundPubSubInfra.PublishRouter.Route(context, intent, dispatcher);
             case MessageIntentEnum.Reply:
                 return replyRouter.Route(context, intent, dispatcher);
             default:
                 throw new UnforwardableMessageException("Unroutable message intent: " + intent);
         }
     }
-
+    
     static MessageIntentEnum GetMesssageIntent(MessageContext message)
     {
         var messageIntent = default(MessageIntentEnum);
@@ -95,31 +126,29 @@ class Bridge<TLeft, TRight> : IBridge
 
     public async Task Start()
     {
+        leftDispatcher = await Endpoint.Start(leftDispatcherConfig).ConfigureAwait(false);
+        rightDispatcher = await Endpoint.Start(rightDispatcherConfig).ConfigureAwait(false);
+
+        //At this stage the pubsub infrastructure is set up.
+
         leftStartable = await RawEndpoint.Create(leftConfig).ConfigureAwait(false);
         rightStartable = await RawEndpoint.Create(rightConfig).ConfigureAwait(false);
 
-        leftSubscribeRouter = CreateSubscribeRouter(leftStartable.Settings.Get<TransportInfrastructure>());
-        rightSubscribeRouter = CreateSubscribeRouter(rightStartable.Settings.Get<TransportInfrastructure>());
-        
         leftEndpoint = await leftStartable.Start().ConfigureAwait(false);
         rightEndpoint = await rightStartable.Start().ConfigureAwait(false);
     }
 
-    IRouter CreateSubscribeRouter(TransportInfrastructure transportInfrastructure)
-    {
-        if (transportInfrastructure.OutboundRoutingPolicy.Publishes == OutboundRoutingType.Unicast)
-        {
-            return new MessageDrivenSubscribeRouter(subscriptionStorage, endpointInstances);
-        }
-        var subscriptionInfra = transportInfrastructure.ConfigureSubscriptionInfrastructure();
-        var factoryProperty = typeof(TransportSubscriptionInfrastructure).GetProperty("SubscriptionManagerFactory", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        var factoryInstance = (Func<IManageSubscriptions>)factoryProperty.GetValue(subscriptionInfra, new object[0]);
-        var subscriptionManager = factoryInstance();
-        return new NativeSubscribeRouter(subscriptionStorage, subscriptionManager);
-    }
-
     public async Task Stop()
     {
+        if (leftDispatcher != null)
+        {
+            await leftDispatcher.Stop().ConfigureAwait(false);
+        }
+        if (rightDispatcher != null)
+        {
+            await rightDispatcher.Stop().ConfigureAwait(false);
+        }
+
         IStoppableRawEnedpoint leftStoppable = null;
         IStoppableRawEnedpoint rightStoppable = null;
 

@@ -5,6 +5,7 @@
   <PropertyGroup>
     <OutputPath>..\..\binaries</OutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RootNamespace>NServiceBus.Bridge</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="3.6.5" />

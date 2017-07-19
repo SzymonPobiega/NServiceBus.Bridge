@@ -4,26 +4,21 @@
     using Routing;
     using Transport;
     using Persistence;
-
-    public class BridgeConfiguration<TLeft, TRight>
-        where TLeft : TransportDefinition, new()
-        where TRight : TransportDefinition, new()
+    
+    public class PortConfiguration<T>
+        where T : TransportDefinition, new()
     {
-        internal string LeftName;
-        internal string RightName;
-        Action<TransportExtensions<TLeft>> leftCustomization;
-        Action<TransportExtensions<TRight>> rightCustomization;
+        string Name;
+        Action<TransportExtensions<T>> customization;
         Action<EndpointConfiguration> subscriptionPersistenceConfig;
-        bool autoCreateQueues;
+        bool? autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
 
-        internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
+        internal PortConfiguration(string name, Action<TransportExtensions<T>> customization)
         {
-            LeftName = leftName;
-            RightName = rightName;
-            this.leftCustomization = leftCustomization;
-            this.rightCustomization = rightCustomization;
+            Name = name;
+            this.customization = customization;
         }
 
         public void UseSubscriptionPersistece<TPersistence>(Action<PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
@@ -51,11 +46,10 @@
 
         public EndpointInstances EndpointInstances { get; } = new EndpointInstances();
 
-        public IBridge Create()
+        internal IPort Create(RuntimeTypeGenerator typeGenerator, string poisonQueue, bool? hubAutoCreateQueues, string hubAutoCreateQueuesIdentity)
         {
-            return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
-                leftCustomization, rightCustomization, maximumConcurrency);
+            return new Port<T>(Name, customization, subscriptionPersistenceConfig, EndpointInstances, DistributionPolicy, typeGenerator, poisonQueue, maximumConcurrency,
+                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity);
         }
     }
 }
