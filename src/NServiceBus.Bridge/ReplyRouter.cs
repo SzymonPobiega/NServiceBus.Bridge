@@ -25,7 +25,7 @@ class ReplyRouter : IRouter
 
         if (replyTo == null)
         {
-            throw new UnforwardableMessageException($"The reply message does not contain 'reply-to' correlation parameter required to route the message.");
+            throw new UnforwardableMessageException("The reply message does not contain \'reply-to\' correlation parameter required to route the message.");
         }
 
         var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);

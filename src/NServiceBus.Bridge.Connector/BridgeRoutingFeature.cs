@@ -15,6 +15,10 @@ class BridgeRoutingFeature : Feature
         var unicastRouteTable = context.Settings.Get<UnicastRoutingTable>();
         var route = UnicastRoute.CreateFromPhysicalAddress(settings.BridgeAddress);
         var publishers = context.Settings.Get<Publishers>();
+        var bindings = context.Settings.Get<QueueBindings>();
+
+        //Make sure bridge queue does exist.
+        bindings.BindSending(settings.BridgeAddress);
 
         //Send the specified messages through the bridge
         var routes = settings.SendRouteTable.Select(x => new RouteTableEntry(x.Key, route)).ToList();
