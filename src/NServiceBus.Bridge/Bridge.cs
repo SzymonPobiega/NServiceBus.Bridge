@@ -48,7 +48,7 @@ class Bridge<TLeft, TRight> : IBridge
             leftConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure);
+        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues);
 
         rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure), poisonQueue);
         var rightTransport = rightConfig.UseTransport<TRight>();
@@ -59,7 +59,7 @@ class Bridge<TLeft, TRight> : IBridge
             rightConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure);
+        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure, autoCreateQueues);
 
         if (maximumConcurrency.HasValue)
         {
@@ -68,7 +68,7 @@ class Bridge<TLeft, TRight> : IBridge
         }
     }
 
-    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure)
+    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues)
         where TTransport : TransportDefinition, new()
     {
         var dispatcherConfig = new EndpointConfiguration(name);
@@ -78,6 +78,7 @@ class Bridge<TLeft, TRight> : IBridge
         {
             c.RegisterSingleton(pubSubInfrastructure);
         });
+        dispatcherConfig.EnableInstallers();
         var transport = dispatcherConfig.UseTransport<TTransport>();
         var settings = transport.GetSettings();
         SetTransportSpecificFlags(settings, poisonQueue);

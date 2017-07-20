@@ -16,7 +16,7 @@ static class BridgeComponentExtensions
     {
         return scenario.WithComponent(new BridgeComponent<TLeft, TRight>(() =>
         {
-            config.UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+            config.UseSubscriptionPersistece<InMemoryPersistence>((e, c) => { });
             return config;
         }));
     }

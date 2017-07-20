@@ -18,9 +18,10 @@ public class When_using_NHibernate_persistence : NServiceBusAcceptanceTest
             .With(() =>
             {
                 var config = Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right");
-                config.UseSubscriptionPersistece<NHibernatePersistence>(c =>
+                config.UseSubscriptionPersistece<NHibernatePersistence>((e, c) =>
                 {
                     c.ConnectionString(@"Data Source=.\SQLEXPRESS;Initial Catalog=nservicebus;Integrated Security=True");
+                    e.EnableInstallers();
                 });
                 return config;
             })

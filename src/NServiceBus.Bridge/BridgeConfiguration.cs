@@ -26,13 +26,13 @@
             this.rightCustomization = rightCustomization;
         }
 
-        public void UseSubscriptionPersistece<TPersistence>(Action<PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
+        public void UseSubscriptionPersistece<TPersistence>(Action<EndpointConfiguration, PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
             where TPersistence : PersistenceDefinition
         {
             this.subscriptionPersistenceConfig = e =>
             {
                 var persistence = e.UsePersistence<TPersistence>();
-                subscriptionPersistenceConfiguration(persistence);
+                subscriptionPersistenceConfiguration(e, persistence);
             };
         }
         
