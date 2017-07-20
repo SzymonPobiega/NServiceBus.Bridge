@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-    <id>NServiceBus.Bridge.Ramp</id>
-    <title>NServiceBus.Bridge.Ramp</title>
+    <id>NServiceBus.Bridge.Connector</id>
+    <title>NServiceBus.Bridge.Connector</title>
     <version>$version$</version>
     <authors>Szymon Pobiega</authors>
     <owners>SzymonPobiega</owners>    
@@ -23,6 +23,6 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\..\binaries\net46\NServiceBus.Bridge.Ramp.???" target="lib\net46" />
+    <file src="..\..\binaries\net46\NServiceBus.Bridge.Connector.???" target="lib\net46" />
   </files>
 </package>

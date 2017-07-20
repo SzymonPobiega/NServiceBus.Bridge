@@ -9,7 +9,6 @@
     <PackageReference Include="NUnit" Version="3.7.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NServiceBus.Bridge.Ramp\NServiceBus.Bridge.Ramp.csproj" />
     <ProjectReference Include="..\NServiceBus.Bridge\NServiceBus.Bridge.csproj" />
   </ItemGroup>
 </Project>

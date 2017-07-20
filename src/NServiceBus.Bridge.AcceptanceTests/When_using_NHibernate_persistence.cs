@@ -4,17 +4,27 @@ using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
 using NServiceBus.AcceptanceTests.EndpointTemplates;
 using NServiceBus.Bridge;
+using NServiceBus.Persistence;
 using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
 [TestFixture]
-public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAcceptanceTest
+public class When_using_NHibernate_persistence : NServiceBusAcceptanceTest
 {
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var result = await Scenario.Define<Context>()
-            .With(Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right"))
+            .With(() =>
+            {
+                var config = Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right");
+                config.UseSubscriptionPersistece<NHibernatePersistence>((e, c) =>
+                {
+                    c.ConnectionString(@"Data Source=.\SQLEXPRESS;Initial Catalog=nservicebus;Integrated Security=True");
+                    e.EnableInstallers();
+                });
+                return config;
+            })
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))
             .WithEndpoint<BaseEventSubscriber>()
             .WithEndpoint<DerivedEventSubscriber>()

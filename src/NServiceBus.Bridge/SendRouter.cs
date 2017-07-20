@@ -11,11 +11,13 @@ class SendRouter : IRouter
 {
     EndpointInstances endpointInstances;
     IDistributionPolicy distributionPolicy;
+    string localPortName;
 
-    public SendRouter(EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy)
+    public SendRouter(EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy, string localPortName = null)
     {
         this.endpointInstances = endpointInstances;
         this.distributionPolicy = distributionPolicy;
+        this.localPortName = localPortName;
     }
 
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
@@ -27,6 +29,17 @@ class SendRouter : IRouter
         }
         var address = SelectDestinationAddress(destinationEndpoint, i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)));
 
+        if (context.Headers.TryGetValue(Headers.ReplyToAddress, out string replyToHeader)
+            && context.Headers.TryGetValue(Headers.CorrelationId, out string correlationId))
+        {
+            // pipe-separated TLV format
+            var newCorrelationId = $"id|{correlationId.Length}|{correlationId}|reply-to|{replyToHeader.Length}|{replyToHeader}";
+            if (localPortName != null)
+            {
+                newCorrelationId += $"|port|{localPortName.Length}|{localPortName}";
+            }
+            context.Headers[Headers.CorrelationId] = newCorrelationId;
+        }
         context.Headers[Headers.ReplyToAddress] = dispatcher.TransportAddress;
 
         var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);

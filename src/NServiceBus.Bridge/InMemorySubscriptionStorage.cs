@@ -6,40 +6,43 @@ using NServiceBus.Extensibility;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
-class InMemorySubscriptionStorage : ISubscriptionStorage
+namespace NServiceBus.Bridge
 {
-    public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
+    public class InMemorySubscriptionStorage : ISubscriptionStorage
     {
-        var dict = storage.GetOrAdd(messageType, type => new ConcurrentDictionary<string, Subscriber>(StringComparer.OrdinalIgnoreCase));
-
-        dict.AddOrUpdate(subscriber.TransportAddress, _ => subscriber, (_, __) => subscriber);
-        return Task.CompletedTask;
-    }
-
-    public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
-    {
-        ConcurrentDictionary<string, Subscriber> dict;
-        if (storage.TryGetValue(messageType, out dict))
+        public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
         {
-            Subscriber _;
-            dict.TryRemove(subscriber.TransportAddress, out _);
+            var dict = storage.GetOrAdd(messageType, type => new ConcurrentDictionary<string, Subscriber>(StringComparer.OrdinalIgnoreCase));
+
+            dict.AddOrUpdate(subscriber.TransportAddress, _ => subscriber, (_, __) => subscriber);
+            return Task.CompletedTask;
         }
-        return Task.CompletedTask;
-    }
 
-    public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
-    {
-        var result = new HashSet<Subscriber>();
-        foreach (var m in messageTypes)
+        public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
         {
-            ConcurrentDictionary<string, Subscriber> list;
-            if (storage.TryGetValue(m, out list))
+            ConcurrentDictionary<string, Subscriber> dict;
+            if (storage.TryGetValue(messageType, out dict))
             {
-                result.UnionWith(list.Values);
+                Subscriber _;
+                dict.TryRemove(subscriber.TransportAddress, out _);
             }
+            return Task.CompletedTask;
         }
-        return Task.FromResult((IEnumerable<Subscriber>)result);
-    }
 
-    ConcurrentDictionary<MessageType, ConcurrentDictionary<string, Subscriber>> storage = new ConcurrentDictionary<MessageType, ConcurrentDictionary<string, Subscriber>>();
+        public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
+        {
+            var result = new HashSet<Subscriber>();
+            foreach (var m in messageTypes)
+            {
+                ConcurrentDictionary<string, Subscriber> list;
+                if (storage.TryGetValue(m, out list))
+                {
+                    result.UnionWith(list.Values);
+                }
+            }
+            return Task.FromResult((IEnumerable<Subscriber>) result);
+        }
+
+        ConcurrentDictionary<MessageType, ConcurrentDictionary<string, Subscriber>> storage = new ConcurrentDictionary<MessageType, ConcurrentDictionary<string, Subscriber>>();
+    }
 }

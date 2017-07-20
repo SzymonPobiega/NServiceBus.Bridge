@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
@@ -8,18 +9,27 @@ using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
 [TestFixture]
-public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAcceptanceTest
+public class When_publishing_from_message_driven_pubsub_endpoint_via_switch : NServiceBusAcceptanceTest
 {
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var result = await Scenario.Define<Context>()
-            .With(Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right"))
+            .WithComponent(new SwitchComponent(() =>
+            {
+                var cfg = new SwitchConfiguration();
+                cfg.AddPort<MsmqTransport>("Port1", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+                cfg.AddPort<MsmqTransport>("Port3", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+
+                cfg.PortTable[Conventions.EndpointNamingConvention(typeof(Publisher))] = "Port1";
+                return cfg;
+            }))
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))
             .WithEndpoint<BaseEventSubscriber>()
             .WithEndpoint<DerivedEventSubscriber>()
             .Done(c => c.BaseEventDelivered && c.DerivedEventDeilvered)
-            .Run();
+            .Run(TimeSpan.FromSeconds(20));
 
         Assert.IsTrue(result.BaseEventDelivered);
         Assert.IsTrue(result.DerivedEventDeilvered);
@@ -64,7 +74,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.ConnectToBridge("Right");
+                var ramp = routing.ConnectToBridge("Port2");
                 ramp.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
@@ -93,7 +103,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.ConnectToBridge("Right");
+                var ramp = routing.ConnectToBridge("Port3");
                 ramp.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }

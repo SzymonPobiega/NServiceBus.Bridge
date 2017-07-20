@@ -10,24 +10,23 @@ using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 using NServiceBus.Unicast.Transport;
 
-class MessageDrivenSubscribeRouter : SubscribeRouter
+class MessageDrivenSubscriptionForwarder : ISubscriptionForwarder
 {
-    static ILog Logger = LogManager.GetLogger<MessageDrivenSubscribeRouter>();
+    static ILog Logger = LogManager.GetLogger<MessageDrivenSubscriptionForwarder>();
 
     EndpointInstances endpointInstances;
 
-    public MessageDrivenSubscribeRouter(ISubscriptionStorage subscriptionStorage, EndpointInstances endpointInstances) 
-        : base(subscriptionStorage)
+    public MessageDrivenSubscriptionForwarder(EndpointInstances endpointInstances) 
     {
         this.endpointInstances = endpointInstances;
     }
 
-    protected override Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher)
+    public Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher)
     {
         return Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher);
     }
 
-    protected override Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher)
+    public Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher)
     {
         return Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Unsubscribe, dispatcher);
     }
@@ -47,7 +46,6 @@ class MessageDrivenSubscribeRouter : SubscribeRouter
             subscriptionMessage.Headers[Headers.ReplyToAddress] = dispatcher.TransportAddress;
             subscriptionMessage.Headers[Headers.SubscriberTransportAddress] = dispatcher.TransportAddress;
             subscriptionMessage.Headers[Headers.SubscriberEndpoint] = dispatcher.EndpointName;
-            subscriptionMessage.Headers["NServiceBus.Bridge.DestinationEndpoint"] = publisherEndpoint;
             subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
             subscriptionMessage.Headers[Headers.NServiceBusVersion] = "6.3.1"; //The code has been copied from 6.3.1
 
