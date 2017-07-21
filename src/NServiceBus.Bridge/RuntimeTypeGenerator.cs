@@ -3,34 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading.Tasks;
-using NServiceBus.Extensibility;
-using NServiceBus.Raw;
-using NServiceBus.Transport;
-using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
-class NativeSubscribeRouter : SubscribeRouter
+class RuntimeTypeGenerator
 {
-    IManageSubscriptions subscriptionManager;
-
-    public NativeSubscribeRouter(ISubscriptionStorage subscriptionStorage, IManageSubscriptions subscriptionManager)
-        : base(subscriptionStorage)
-    {
-        this.subscriptionManager = subscriptionManager;
-    }
-
-    protected override Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher)
-    {
-        var type = GetType(messageType);
-        return subscriptionManager.Subscribe(type, new ContextBag());
-    }
-
-    protected override Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher)
-    {
-        var type = GetType(messageType);
-        return subscriptionManager.Unsubscribe(type, new ContextBag());
-    }
-
     public Type GetType(string messageType)
     {
         var parts = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
@@ -60,7 +35,7 @@ class NativeSubscribeRouter : SubscribeRouter
 
                 for (var i = 1; i < nestedParts.Length; i++)
                 {
-                    var path = string.Join("+", nestedParts.Take(i+1));
+                    var path = string.Join("+", nestedParts.Take(i + 1));
                     typeBuilder = GetNestedTypeBuilder(typeBuilder, nestedParts[i], path);
                 }
                 result = typeBuilder.CreateType();

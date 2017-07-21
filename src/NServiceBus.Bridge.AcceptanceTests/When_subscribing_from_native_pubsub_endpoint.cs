@@ -15,7 +15,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
     {
         var result = await Scenario.Define<Context>()
             .With(Bridge.Between<MsmqTransport>("Left").And<RabbitMQTransport>("Right", t => t.ConnectionString("host=localhost")))
-            .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))
+            .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent2())))
             .WithEndpoint<BaseEventSubscriber>()
             .WithEndpoint<DerivedEventSubscriber>()
             .Done(c => c.BaseEventDelivered && c.DerivedEventDeilvered)
@@ -64,12 +64,12 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
-                var ramp = routing.UseBridgeRamp("Right");
-                ramp.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
+                var ramp = routing.ConnectToBridge("Right");
+                ramp.RegisterPublisher(typeof(MyBaseEvent2), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
 
-        class BaseEventHandler : IHandleMessages<MyBaseEvent>
+        class BaseEventHandler : IHandleMessages<MyBaseEvent2>
         {
             Context scenarioContext;
 
@@ -78,7 +78,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
                 this.scenarioContext = scenarioContext;
             }
 
-            public Task Handle(MyBaseEvent message, IMessageHandlerContext context)
+            public Task Handle(MyBaseEvent2 message, IMessageHandlerContext context)
             {
                 scenarioContext.BaseEventDelivered = true;
                 return Task.CompletedTask;
@@ -93,12 +93,12 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
-                var ramp = routing.UseBridgeRamp("Right");
-                ramp.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
+                var ramp = routing.ConnectToBridge("Right");
+                ramp.RegisterPublisher(typeof(MyDerivedEvent2), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
 
-        class DerivedEventHandler : IHandleMessages<MyDerivedEvent>
+        class DerivedEventHandler : IHandleMessages<MyDerivedEvent2>
         {
             Context scenarioContext;
 
@@ -107,7 +107,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
                 this.scenarioContext = scenarioContext;
             }
 
-            public Task Handle(MyDerivedEvent message, IMessageHandlerContext context)
+            public Task Handle(MyDerivedEvent2 message, IMessageHandlerContext context)
             {
                 scenarioContext.DerivedEventDeilvered = true;
                 return Task.CompletedTask;
@@ -115,11 +115,11 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
         }
     }
 
-    class MyBaseEvent : IEvent
+    class MyBaseEvent2 : IEvent
     {
     }
 
-    class MyDerivedEvent : MyBaseEvent
+    class MyDerivedEvent2 : MyBaseEvent2
     {
     }
 }

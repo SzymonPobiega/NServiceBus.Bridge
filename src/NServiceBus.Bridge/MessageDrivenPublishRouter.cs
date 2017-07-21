@@ -11,12 +11,12 @@ using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
-class PublishRouter : IRouter
+class MessageDrivenPublishRouter : IRouter
 {
     ISubscriptionStorage subscriptionStorage;
     IDistributionPolicy distributionPolicy;
 
-    public PublishRouter(ISubscriptionStorage subscriptionStorage, IDistributionPolicy distributionPolicy)
+    public MessageDrivenPublishRouter(ISubscriptionStorage subscriptionStorage, IDistributionPolicy distributionPolicy)
     {
         this.subscriptionStorage = subscriptionStorage;
         this.distributionPolicy = distributionPolicy;

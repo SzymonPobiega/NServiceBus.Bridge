@@ -1,9 +1,10 @@
-﻿using System;
-using NServiceBus.Routing;
-using NServiceBus.Transport;
-
-namespace NServiceBus.Bridge
+﻿namespace NServiceBus.Bridge
 {
+    using System;
+    using Routing;
+    using Transport;
+    using Persistence;
+
     public class BridgeConfiguration<TLeft, TRight>
         where TLeft : TransportDefinition, new()
         where TRight : TransportDefinition, new()
@@ -12,16 +13,27 @@ namespace NServiceBus.Bridge
         internal string RightName;
         Action<TransportExtensions<TLeft>> leftCustomization;
         Action<TransportExtensions<TRight>> rightCustomization;
+        Action<EndpointConfiguration> subscriptionPersistenceConfig;
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
 
         internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
         {
-            this.LeftName = leftName;
-            this.RightName = rightName;
+            LeftName = leftName;
+            RightName = rightName;
             this.leftCustomization = leftCustomization;
             this.rightCustomization = rightCustomization;
+        }
+
+        public void UseSubscriptionPersistece<TPersistence>(Action<EndpointConfiguration, PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
+            where TPersistence : PersistenceDefinition
+        {
+            this.subscriptionPersistenceConfig = e =>
+            {
+                var persistence = e.UsePersistence<TPersistence>();
+                subscriptionPersistenceConfiguration(e, persistence);
+            };
         }
         
         public void AutoCreateQueues(string identity = null)
@@ -42,7 +54,7 @@ namespace NServiceBus.Bridge
         public IBridge Create()
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                EndpointInstances, new InMemorySubscriptionStorage(), DistributionPolicy, "poison",
+                EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
                 leftCustomization, rightCustomization, maximumConcurrency);
         }
     }

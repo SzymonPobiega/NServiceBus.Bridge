@@ -37,7 +37,7 @@ public class When_replying_to_a_message : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.UseBridgeRamp("Left");
+                var ramp = routing.ConnectToBridge("Left");
                 ramp.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Receiver)));
             });
         }

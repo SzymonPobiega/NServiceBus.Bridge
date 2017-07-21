@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace NServiceBus
 {
-    public class RampSettings
+    public class BridgeRoutingSettings
     {
-        internal RampSettings(string bridgeAddress)
+        internal BridgeRoutingSettings(string bridgeAddress)
         {
             BridgeAddress = bridgeAddress;
         }
@@ -20,8 +20,24 @@ namespace NServiceBus
             PublisherTable[eventType] = publisherEndpointName;
         }
 
+        public void SetPort(string endpointName, string port)
+        {
+            if (string.IsNullOrEmpty(endpointName))
+            {
+                throw new ArgumentException("Endpoint name cannot be an empty.", nameof(endpointName));
+            }
+
+            if (string.IsNullOrEmpty(port))
+            {
+                throw new ArgumentException("Port name cannot be an empty.", nameof(port));
+            }
+
+            PortTable[endpointName] = port;
+        }
+
         internal string BridgeAddress;
         internal Dictionary<Type, string> SendRouteTable = new Dictionary<Type, string>();
         internal Dictionary<Type, string> PublisherTable = new Dictionary<Type, string>();
+        internal Dictionary<string, string> PortTable = new Dictionary<string, string>();
     }
 }

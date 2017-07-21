@@ -1,5 +1,7 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NServiceBus;
 using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTesting.Support;
 using NServiceBus.Bridge;
@@ -8,6 +10,18 @@ using NServiceBus.Transport;
 static class BridgeComponentExtensions
 {
     public static IScenarioWithEndpointBehavior<TContext> With<TContext, TLeft, TRight>(this IScenarioWithEndpointBehavior<TContext> scenario, BridgeConfiguration<TLeft, TRight> config)
+        where TContext : ScenarioContext
+        where TLeft : TransportDefinition, new()
+        where TRight : TransportDefinition, new()
+    {
+        return scenario.WithComponent(new BridgeComponent<TLeft, TRight>(() =>
+        {
+            config.UseSubscriptionPersistece<InMemoryPersistence>((e, c) => { });
+            return config;
+        }));
+    }
+
+    public static IScenarioWithEndpointBehavior<TContext> With<TContext, TLeft, TRight>(this IScenarioWithEndpointBehavior<TContext> scenario, Func<BridgeConfiguration<TLeft, TRight>> config)
         where TContext : ScenarioContext
         where TLeft : TransportDefinition, new()
         where TRight : TransportDefinition, new()
@@ -22,9 +36,9 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
 {
     BridgeConfiguration<TLeft, TRight> config;
 
-    public BridgeComponent(BridgeConfiguration<TLeft, TRight> config)
+    public BridgeComponent(Func<BridgeConfiguration<TLeft, TRight>> config)
     {
-        this.config = config;
+        this.config = config();
     }
 
     public Task<ComponentRunner> CreateRunner(RunDescriptor run)
