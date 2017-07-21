@@ -16,11 +16,11 @@ class SwitchImpl : ISwitch
 
     public async Task Start()
     {
-        await Task.WhenAll(ports.Values.Select(s => s.Initialize(Forward))).ConfigureAwait(false);
-        await Task.WhenAll(ports.Values.Select(s => s.StartReceiving())).ConfigureAwait(false);
+        await Task.WhenAll(ports.Values.Select(p => p.Initialize((ctx, infra) => Forward(p.Name, ctx, infra)))).ConfigureAwait(false);
+        await Task.WhenAll(ports.Values.Select(p => p.StartReceiving())).ConfigureAwait(false);
     }
 
-    Task Forward(MessageContext msg, PubSubInfrastructure inboundPubSubInfrastructure)
+    Task Forward(string incomingPort, MessageContext msg, PubSubInfrastructure inboundPubSubInfrastructure)
     {
         var intent = GetMesssageIntent(msg);
         string destinationPortName;
@@ -37,7 +37,7 @@ class SwitchImpl : ISwitch
                 }
                 return destinationPort.Forward(msg, inboundPubSubInfrastructure);
             case MessageIntentEnum.Publish:
-                return Task.WhenAll(ports.Values.Select(x => x.Forward(msg, inboundPubSubInfrastructure)));
+                return Task.WhenAll(ports.Values.Where(p => p.Name != incomingPort).Select(x => x.Forward(msg, inboundPubSubInfrastructure)));
             case MessageIntentEnum.Reply:
                 destinationPortName = ResolveReplyDestinationPort(msg);
                 if (!ports.TryGetValue(destinationPortName, out destinationPort))
