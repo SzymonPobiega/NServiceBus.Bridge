@@ -19,7 +19,7 @@ class RoutingHeadersBehavior : Behavior<IOutgoingSendContext>
         if (routeTable.TryGetValue(context.Message.MessageType, out string ultimateDestination))
         {
             context.Headers["NServiceBus.Bridge.DestinationEndpoint"] = ultimateDestination;
-            if (portTable.TryGetValue(ultimateDestination, out string portName))
+            if (portTable.TryGetValue(ultimateDestination, out var portName))
             {
                 context.Headers["NServiceBus.Bridge.DestinationPort"] = portName;
             }
