@@ -8,9 +8,13 @@
     <RootNamespace>NServiceBus.Bridge</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="GitVersionTask" Version="3.6.5" />
-    <PackageReference Include="NServiceBus" Version="6.3.3" />
-    <PackageReference Include="NServiceBus.Raw" Version="1.0.0" />
-    <PackageReference Include="NuGetPackager" Version="0.6.3" />
+    <PackageReference Include="GitVersionTask" Version="4.0.0-*" PrivateAssets="All" />
+    <PackageReference Include="NServiceBus" Version="[7.0.0-*, 8.0.0)" />
+    <PackageReference Include="NServiceBus.Raw" Version="[3.0.0-*, 4.0.0)" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <Description>Allows to connect NServiceBus endpoints running different transports</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
 </Project>

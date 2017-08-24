@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
-using NServiceBus.Configuration.AdvanceExtensibility;
+using NServiceBus.Configuration.AdvancedExtensibility;
 using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Settings;
@@ -150,8 +150,8 @@ class Bridge<TLeft, TRight> : IBridge
             await rightDispatcher.Stop().ConfigureAwait(false);
         }
 
-        IStoppableRawEnedpoint leftStoppable = null;
-        IStoppableRawEnedpoint rightStoppable = null;
+        IStoppableRawEndpoint leftStoppable = null;
+        IStoppableRawEndpoint rightStoppable = null;
 
         if (leftEndpoint != null)
         {

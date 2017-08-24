@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
-using NServiceBus.Configuration.AdvanceExtensibility;
+using NServiceBus.Configuration.AdvancedExtensibility;
 using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Settings;
@@ -133,7 +133,7 @@ class Port<T> : IPort
     IEndpointInstance pubSubRoutingEndpoint;
     IReceivingRawEndpoint receiver;
     IStartableRawEndpoint sender;
-    IStoppableRawEnedpoint stoppable;
+    IStoppableRawEndpoint stoppable;
 
     RawEndpointConfiguration rawConfig;
     EndpointConfiguration routerEndpointConfig;

@@ -3,10 +3,7 @@
     <TargetFramework>net46</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="NUnit" Version="3.7.1" />
+    <PackageReference Include="NUnit" Version="3.7.*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NServiceBus.Bridge\NServiceBus.Bridge.csproj" />
