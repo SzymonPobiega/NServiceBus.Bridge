@@ -1,11 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net46</TargetFramework>
-  </PropertyGroup>
-  <PropertyGroup>
     <OutputPath>..\..\binaries</OutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>NServiceBus.Bridge</RootNamespace>
+    <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="4.0.0-*" PrivateAssets="All" />
