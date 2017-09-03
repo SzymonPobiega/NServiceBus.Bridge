@@ -9,31 +9,37 @@ class BridgeRoutingFeature : Feature
 {
     protected override void Setup(FeatureConfigurationContext context)
     {
-        var transportInfra = context.Settings.Get<TransportInfrastructure>();
+        var settings = context.Settings;
+        var transportInfra = settings.Get<TransportInfrastructure>();
         var nativePubSub = transportInfra.OutboundRoutingPolicy.Publishes == OutboundRoutingType.Multicast;
-        var settings = context.Settings.Get<BridgeRoutingSettings>();
-        var unicastRouteTable = context.Settings.Get<UnicastRoutingTable>();
-        var route = UnicastRoute.CreateFromPhysicalAddress(settings.BridgeAddress);
-        var publishers = context.Settings.Get<Publishers>();
-        var bindings = context.Settings.Get<QueueBindings>();
+        var bridgeRoutingSettings = settings.Get<BridgeRoutingSettings>();
+        var unicastRouteTable = settings.Get<UnicastRoutingTable>();
+        var bridgeAddress = bridgeRoutingSettings.BridgeAddress;
+        var route = UnicastRoute.CreateFromPhysicalAddress(bridgeAddress);
+        var publishers = settings.Get<Publishers>();
+        var bindings = settings.Get<QueueBindings>();
 
         //Make sure bridge queue does exist.
-        bindings.BindSending(settings.BridgeAddress);
+        bindings.BindSending(bridgeAddress);
 
         //Send the specified messages through the bridge
-        var routes = settings.SendRouteTable.Select(x => new RouteTableEntry(x.Key, route)).ToList();
+        var sendRouteTable = bridgeRoutingSettings.SendRouteTable;
+        var routes = sendRouteTable.Select(x => new RouteTableEntry(x.Key, route)).ToList();
         unicastRouteTable.AddOrReplaceRoutes("NServiceBus.Bridge", routes);
 
-        var distributorAddress = context.Settings.GetOrDefault<string>("LegacyDistributor.Address");
-        var subscriberAddress = distributorAddress ?? context.Settings.LocalAddress();
+        var distributorAddress = settings.GetOrDefault<string>("LegacyDistributor.Address");
+        var subscriberAddress = distributorAddress ?? settings.LocalAddress();
 
-        var publisherAddress = PublisherAddress.CreateFromPhysicalAddresses(settings.BridgeAddress);
-        publishers.AddOrReplacePublishers("Bridge", settings.PublisherTable.Select(kvp => new PublisherTableEntry(kvp.Key, publisherAddress)).ToList());
+        var publisherAddress = PublisherAddress.CreateFromPhysicalAddresses(bridgeAddress);
+        var publisherTable = bridgeRoutingSettings.PublisherTable;
+        publishers.AddOrReplacePublishers("Bridge", publisherTable.Select(kvp => new PublisherTableEntry(kvp.Key, publisherAddress)).ToList());
 
-        context.Pipeline.Register(new RoutingHeadersBehavior(settings.SendRouteTable, settings.PortTable), "Sets the ultimate destination endpoint on the outgoing messages.");
-        context.Pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), settings.BridgeAddress, b.Build<IDispatchMessages>(), settings.PublisherTable, settings.PortTable, nativePubSub),
+        var pipeline = context.Pipeline;
+        var portTable = bridgeRoutingSettings.PortTable;
+        pipeline.Register(new RoutingHeadersBehavior(sendRouteTable, portTable), "Sets the ultimate destination endpoint on the outgoing messages.");
+        pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, settings.EndpointName(), bridgeAddress, b.Build<IDispatchMessages>(), publisherTable, portTable, nativePubSub),
             "Dispatches the subscribe request to the bridge.");
-        context.Pipeline.Register(b => new BridgeUnsubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), settings.BridgeAddress, b.Build<IDispatchMessages>(), settings.PublisherTable, settings.PortTable, nativePubSub),
+        pipeline.Register(b => new BridgeUnsubscribeBehavior(subscriberAddress, settings.EndpointName(), bridgeAddress, b.Build<IDispatchMessages>(), publisherTable, portTable, nativePubSub),
             "Dispatches the unsubscribe request to the bridge.");
     }
 }
