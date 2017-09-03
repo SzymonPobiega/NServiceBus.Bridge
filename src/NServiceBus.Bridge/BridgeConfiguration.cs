@@ -29,13 +29,13 @@
         public void UseSubscriptionPersistece<TPersistence>(Action<EndpointConfiguration, PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
             where TPersistence : PersistenceDefinition
         {
-            this.subscriptionPersistenceConfig = e =>
+            subscriptionPersistenceConfig = e =>
             {
                 var persistence = e.UsePersistence<TPersistence>();
                 subscriptionPersistenceConfiguration(e, persistence);
             };
         }
-        
+
         public void AutoCreateQueues(string identity = null)
         {
             autoCreateQueues = true;
@@ -53,7 +53,7 @@
 
         public IBridge Create()
         {
-            return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
+            return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity,
                 EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
                 leftCustomization, rightCustomization, maximumConcurrency);
         }

@@ -6,7 +6,7 @@ namespace NServiceBus.Bridge
 
     public class SwitchConfiguration
     {
-        public PortConfiguration<T> AddPort<T>(string name, Action<TransportExtensions<T>> customization) 
+        public PortConfiguration<T> AddPort<T>(string name, Action<TransportExtensions<T>> customization)
             where T : TransportDefinition, new()
         {
             var portConfig = new PortConfiguration<T>(name, customization);

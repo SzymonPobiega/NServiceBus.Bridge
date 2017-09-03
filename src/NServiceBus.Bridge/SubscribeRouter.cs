@@ -24,16 +24,14 @@ class SubscribeRouter
             throw new UnforwardableMessageException("Subscription messages need to have intent set to Subscribe/Unsubscribe.");
         }
 
-        string subscriberAddress;
         string subscriberEndpoint = null;
-        string publisherEndpoint;
 
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out publisherEndpoint))
+        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var publisherEndpoint))
         {
             throw new UnforwardableMessageException("Subscription message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
 
-        if (context.Headers.TryGetValue(Headers.SubscriberTransportAddress, out subscriberAddress))
+        if (context.Headers.TryGetValue(Headers.SubscriberTransportAddress, out var subscriberAddress))
         {
             subscriberEndpoint = context.Headers[Headers.SubscriberEndpoint];
         }
@@ -60,7 +58,7 @@ class SubscribeRouter
             await forwarder.ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
         }
     }
-    
+
     static string GetSubscriptionMessageTypeFrom(MessageContext msg)
     {
         msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out var value);

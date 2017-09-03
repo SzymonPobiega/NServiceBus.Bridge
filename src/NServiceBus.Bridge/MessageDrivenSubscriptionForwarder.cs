@@ -16,7 +16,7 @@ class MessageDrivenSubscriptionForwarder : ISubscriptionForwarder
 
     EndpointInstances endpointInstances;
 
-    public MessageDrivenSubscriptionForwarder(EndpointInstances endpointInstances) 
+    public MessageDrivenSubscriptionForwarder(EndpointInstances endpointInstances)
     {
         this.endpointInstances = endpointInstances;
     }

@@ -29,7 +29,7 @@ class SwitchComponent : IComponentBehavior
         public Runner(ISwitch @switch, string name)
         {
             this.@switch = @switch;
-            this.Name = name;
+            Name = name;
         }
 
         public override Task Start(CancellationToken token)
@@ -39,8 +39,8 @@ class SwitchComponent : IComponentBehavior
 
         public override Task Stop()
         {
-            return @switch != null 
-                ? @switch.Stop() 
+            return @switch != null
+                ? @switch.Stop()
                 : Task.CompletedTask;
         }
 

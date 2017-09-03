@@ -4,7 +4,7 @@
     using Routing;
     using Transport;
     using Persistence;
-    
+
     public class PortConfiguration<T>
         where T : TransportDefinition, new()
     {
@@ -24,13 +24,13 @@
         public void UseSubscriptionPersistece<TPersistence>(Action<PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
             where TPersistence : PersistenceDefinition
         {
-            this.subscriptionPersistenceConfig = e =>
+            subscriptionPersistenceConfig = e =>
             {
                 var persistence = e.UsePersistence<TPersistence>();
                 subscriptionPersistenceConfiguration(persistence);
             };
         }
-        
+
         public void AutoCreateQueues(string identity = null)
         {
             autoCreateQueues = true;

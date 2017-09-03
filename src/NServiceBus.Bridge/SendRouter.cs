@@ -22,8 +22,7 @@ class SendRouter : IRouter
 
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
     {
-        string destinationEndpoint;
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out destinationEndpoint))
+        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var destinationEndpoint))
         {
             throw new UnforwardableMessageException("Sent message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }

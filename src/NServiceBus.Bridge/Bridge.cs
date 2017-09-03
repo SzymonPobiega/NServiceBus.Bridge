@@ -28,8 +28,8 @@ class Bridge<TLeft, TRight> : IBridge
     IRouter sendRouter;
     IRouter replyRouter;
 
-    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, 
-        Action<EndpointConfiguration> subscriptionPersistenceConfig, IDistributionPolicy distributionPolicy, string poisonQueue, 
+    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances,
+        Action<EndpointConfiguration> subscriptionPersistenceConfig, IDistributionPolicy distributionPolicy, string poisonQueue,
         Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency)
     {
         sendRouter = new SendRouter(endpointInstances, distributionPolicy);
@@ -114,7 +114,7 @@ class Bridge<TLeft, TRight> : IBridge
                 throw new UnforwardableMessageException("Unroutable message intent: " + intent);
         }
     }
-    
+
     static MessageIntentEnum GetMesssageIntent(MessageContext message)
     {
         var messageIntent = default(MessageIntentEnum);

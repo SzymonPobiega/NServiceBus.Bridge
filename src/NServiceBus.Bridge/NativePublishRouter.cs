@@ -18,8 +18,7 @@ class NativePublishRouter : IRouter
 
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
     {
-        string messageTypes;
-        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out messageTypes))
+        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out var messageTypes))
         {
             throw new UnforwardableMessageException("Message need to have 'NServiceBus.EnclosedMessageTypes' header in order to be routed.");
         }

@@ -18,7 +18,7 @@ class PubSubInfrastructure
         SubscribeForwarder = subscribeForwarder;
         SubscriptionStorage = subscriptionStorage;
     }
-    
+
     public IRouter PublishRouter { get; private set; }
     public ISubscriptionForwarder SubscribeForwarder { get; private set; }
     public ISubscriptionStorage SubscriptionStorage { get; private set; }
