@@ -150,8 +150,8 @@ class Bridge<TLeft, TRight> : IBridge
             await rightDispatcher.Stop().ConfigureAwait(false);
         }
 
-        IStoppableRawEnedpoint leftStoppable = null;
-        IStoppableRawEnedpoint rightStoppable = null;
+        IStoppableRawEndpoint leftStoppable = null;
+        IStoppableRawEndpoint rightStoppable = null;
 
         if (leftEndpoint != null)
         {
