@@ -53,7 +53,7 @@ class SwitchImpl : ISwitch
     static MessageIntentEnum GetMesssageIntent(MessageContext message)
     {
         var messageIntent = default(MessageIntentEnum);
-        if (message.Headers.TryGetValue(Headers.MessageIntent, out string messageIntentString))
+        if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
         {
             Enum.TryParse(messageIntentString, true, out messageIntent);
         }
@@ -69,7 +69,7 @@ class SwitchImpl : ISwitch
     string ResolveReplyDestinationPort(MessageContext context)
     {
         string destinationPort = null;
-        if (!context.Headers.TryGetValue(Headers.CorrelationId, out string correlationId))
+        if (!context.Headers.TryGetValue(Headers.CorrelationId, out var correlationId))
         {
             throw new UnforwardableMessageException($"The reply has to contain a '{Headers.CorrelationId}' header set by the bridge ramp when sending out the initial message.");
         }
@@ -90,7 +90,7 @@ class SwitchImpl : ISwitch
 
     string ResolveDestinationPort(MessageContext context)
     {
-        if (context.Headers.TryGetValue("NServiceBus.Bridge.DestinationPort", out string destinationPort))
+        if (context.Headers.TryGetValue("NServiceBus.Bridge.DestinationPort", out var destinationPort))
         {
             return destinationPort;
         }
