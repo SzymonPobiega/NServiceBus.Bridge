@@ -133,7 +133,7 @@ class Port<T> : IPort
     IEndpointInstance pubSubRoutingEndpoint;
     IReceivingRawEndpoint receiver;
     IStartableRawEndpoint sender;
-    IStoppableRawEnedpoint stoppable;
+    IStoppableRawEndpoint stoppable;
 
     RawEndpointConfiguration rawConfig;
     EndpointConfiguration routerEndpointConfig;
