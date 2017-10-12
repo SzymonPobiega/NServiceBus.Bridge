@@ -29,8 +29,8 @@ class SendRouter : IRouter
         }
         var address = SelectDestinationAddress(destinationEndpoint, i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)));
 
-        if (context.Headers.TryGetValue(Headers.ReplyToAddress, out string replyToHeader)
-            && context.Headers.TryGetValue(Headers.CorrelationId, out string correlationId))
+        if (context.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToHeader)
+            && context.Headers.TryGetValue(Headers.CorrelationId, out var correlationId))
         {
             // pipe-separated TLV format
             var newCorrelationId = $"id|{correlationId.Length}|{correlationId}|reply-to|{replyToHeader.Length}|{replyToHeader}";

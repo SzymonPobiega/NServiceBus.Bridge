@@ -10,7 +10,7 @@ class ReplyRouter : IRouter
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
     {
         string replyTo = null;
-        if (!context.Headers.TryGetValue(Headers.CorrelationId, out string correlationId))
+        if (!context.Headers.TryGetValue(Headers.CorrelationId, out var correlationId))
         {
             throw new UnforwardableMessageException($"The reply has to contain a '{Headers.CorrelationId}' header set by the bridge ramp when sending out the initial message.");
         }
