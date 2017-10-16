@@ -39,7 +39,7 @@ class BridgeUnsubscribeBehavior : Behavior<IUnsubscribeContext>
             subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
             subscriptionMessage.Headers[Headers.NServiceBusVersion] = "6.3.1"; //The code has been copied from 6.3.1
 
-            if (portTable.TryGetValue(publisherEndpoint, out string publisherPort))
+            if (portTable.TryGetValue(publisherEndpoint, out var publisherPort))
             {
                 subscriptionMessage.Headers["NServiceBus.Bridge.DestinationPort"] = publisherPort;
             }

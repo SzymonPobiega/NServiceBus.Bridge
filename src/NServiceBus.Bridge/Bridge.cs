@@ -118,7 +118,7 @@ class Bridge<TLeft, TRight> : IBridge
     static MessageIntentEnum GetMesssageIntent(MessageContext message)
     {
         var messageIntent = default(MessageIntentEnum);
-        if (message.Headers.TryGetValue(Headers.MessageIntent, out string messageIntentString))
+        if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
         {
             Enum.TryParse(messageIntentString, true, out messageIntent);
         }
@@ -150,8 +150,8 @@ class Bridge<TLeft, TRight> : IBridge
             await rightDispatcher.Stop().ConfigureAwait(false);
         }
 
-        IStoppableRawEnedpoint leftStoppable = null;
-        IStoppableRawEnedpoint rightStoppable = null;
+        IStoppableRawEndpoint leftStoppable = null;
+        IStoppableRawEndpoint rightStoppable = null;
 
         if (leftEndpoint != null)
         {

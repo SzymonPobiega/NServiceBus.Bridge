@@ -63,12 +63,12 @@ class SubscribeRouter
     
     static string GetSubscriptionMessageTypeFrom(MessageContext msg)
     {
-        msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out string value);
+        msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out var value);
         return value;
     }
 
     static string GetReplyToAddress(MessageContext message)
     {
-        return message.Headers.TryGetValue(Headers.ReplyToAddress, out string replyToAddress) ? replyToAddress : null;
+        return message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress) ? replyToAddress : null;
     }
 }

@@ -47,7 +47,7 @@ class RuntimeTypeGenerator
 
     TypeBuilder GetRootTypeBuilder(ModuleBuilder moduleBuilder, string name)
     {
-        if (typeBuilders.TryGetValue(name, out TypeBuilder builder))
+        if (typeBuilders.TryGetValue(name, out var builder))
         {
             return builder;
         }
@@ -60,7 +60,7 @@ class RuntimeTypeGenerator
 
     TypeBuilder GetNestedTypeBuilder(TypeBuilder typeBuilder, string name, string path)
     {
-        if (typeBuilders.TryGetValue(path, out TypeBuilder builder))
+        if (typeBuilders.TryGetValue(path, out var builder))
         {
             return builder;
         }
