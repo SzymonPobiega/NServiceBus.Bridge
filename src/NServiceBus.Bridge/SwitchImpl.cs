@@ -8,15 +8,16 @@ using NServiceBus.Transport;
 
 class SwitchImpl : ISwitch
 {
-    public SwitchImpl(IPort[] ports, Dictionary<string, string> routeTable)
+    public SwitchImpl(IPort[] ports, Dictionary<string, string> routeTable, InterceptMessageForwarding configInterceptMethod)
     {
         this.routeTable = routeTable;
+        this.configInterceptMethod = configInterceptMethod;
         this.ports = ports.ToDictionary(x => x.Name, x => x);
     }
 
     public async Task Start()
     {
-        await Task.WhenAll(ports.Values.Select(p => p.Initialize((ctx, infra) => Forward(p.Name, ctx, infra)))).ConfigureAwait(false);
+        await Task.WhenAll(ports.Values.Select(p => p.Initialize((ctx, infra) => configInterceptMethod(p.Name, ctx, () => Forward(p.Name, ctx, infra))))).ConfigureAwait(false);
         await Task.WhenAll(ports.Values.Select(p => p.StartReceiving())).ConfigureAwait(false);
     }
 
@@ -108,4 +109,5 @@ class SwitchImpl : ISwitch
 
     Dictionary<string, IPort> ports;
     Dictionary<string, string> routeTable;
+    InterceptMessageForwarding configInterceptMethod;
 }

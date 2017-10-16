@@ -7,10 +7,14 @@
     <PackageReference Include="NServiceBus.AcceptanceTesting" Version="6.3.0-alpha0080" />
     <PackageReference Include="NServiceBus.NHibernate" Version="7.2.1" />
     <PackageReference Include="NServiceBus.RabbitMQ" Version="4.3.2" />
+    <PackageReference Include="NServiceBus.Azure.Transports.WindowsAzureServiceBus" Version="7.2.6" />
     <PackageReference Include="NUnit" Version="2.5.10.11092" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NServiceBus.Bridge.Connector\NServiceBus.Bridge.Connector.csproj" />
     <ProjectReference Include="..\NServiceBus.Bridge\NServiceBus.Bridge.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Transactions" />
   </ItemGroup>
 </Project>

@@ -20,8 +20,14 @@ namespace NServiceBus.Bridge
             autoCreateQueuesIdentity = identity;
         }
 
+        public void InterceptForawrding(InterceptMessageForwarding interceptMethod)
+        {
+            InterceptMethod = interceptMethod ?? throw new ArgumentNullException(nameof(interceptMethod));
+        }
+
         public Dictionary<string, string> PortTable { get; } = new Dictionary<string, string>();
 
+        internal InterceptMessageForwarding InterceptMethod = (queue, message, forward) => forward();
         bool? autoCreateQueues;
         string autoCreateQueuesIdentity;
         RuntimeTypeGenerator typeGenerator = new RuntimeTypeGenerator();
