@@ -30,7 +30,8 @@ class Bridge<TLeft, TRight> : IBridge
 
     public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, 
         Action<EndpointConfiguration> subscriptionPersistenceConfig, IDistributionPolicy distributionPolicy, string poisonQueue, 
-        Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency)
+        Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency,
+        InterceptMessageForwarding interceptForward)
     {
         sendRouter = new SendRouter(endpointInstances, distributionPolicy);
         replyRouter = new ReplyRouter();
@@ -39,7 +40,7 @@ class Bridge<TLeft, TRight> : IBridge
         var leftPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
         var rightPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
 
-        leftConfig = RawEndpointConfiguration.Create(leftName, (context, _) => Forward(context, rightStartable, leftPubSubInfrastructure, rightPubSubInfrastructure), poisonQueue);
+        leftConfig = RawEndpointConfiguration.Create(leftName, (context, _) => interceptForward(leftName, context, () => Forward(context, rightStartable, leftPubSubInfrastructure, rightPubSubInfrastructure)), poisonQueue);
         var leftTransport = leftConfig.UseTransport<TLeft>();
         SetTransportSpecificFlags(leftTransport.GetSettings(), poisonQueue);
         leftCustomization?.Invoke(leftTransport);
@@ -50,7 +51,7 @@ class Bridge<TLeft, TRight> : IBridge
 
         leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues);
 
-        rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure), poisonQueue);
+        rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => interceptForward(rightName, context, () => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure)), poisonQueue);
         var rightTransport = rightConfig.UseTransport<TRight>();
         SetTransportSpecificFlags(rightTransport.GetSettings(), poisonQueue);
         rightCustomization?.Invoke(rightTransport);

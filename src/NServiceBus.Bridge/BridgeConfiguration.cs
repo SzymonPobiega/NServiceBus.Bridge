@@ -17,6 +17,7 @@
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
+        InterceptMessageForwarding interceptMethod = (queue, message, forward) => forward();
 
         internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
         {
@@ -34,6 +35,11 @@
                 var persistence = e.UsePersistence<TPersistence>();
                 subscriptionPersistenceConfiguration(e, persistence);
             };
+        }
+
+        public void InterceptForawrding(InterceptMessageForwarding interceptMethod)
+        {
+            this.interceptMethod = interceptMethod ?? throw new ArgumentNullException(nameof(interceptMethod));
         }
         
         public void AutoCreateQueues(string identity = null)
@@ -55,7 +61,7 @@
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
                 EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
-                leftCustomization, rightCustomization, maximumConcurrency);
+                leftCustomization, rightCustomization, maximumConcurrency, interceptMethod);
         }
     }
 }
