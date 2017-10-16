@@ -13,6 +13,7 @@ using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
 {
     [Test]
+    [Explicit]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
         var bridgeConfig = Bridge.Between<MsmqTransport>("Left").And<AzureServiceBusTransport>("Right", extensions =>
