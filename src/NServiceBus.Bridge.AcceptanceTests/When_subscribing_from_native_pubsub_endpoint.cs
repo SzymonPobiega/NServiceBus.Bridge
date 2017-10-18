@@ -14,7 +14,11 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var result = await Scenario.Define<Context>()
-            .With(Bridge.Between<MsmqTransport>("Left").And<RabbitMQTransport>("Right", t => t.ConnectionString("host=localhost")))
+            .With(Bridge.Between<MsmqTransport>("Left").And<RabbitMQTransport>("Right", t =>
+            {
+                t.ConnectionString("host=localhost");
+                t.UseConventionalRoutingTopology();
+            }))
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent2())))
             .WithEndpoint<BaseEventSubscriber>()
             .WithEndpoint<DerivedEventSubscriber>()
@@ -63,7 +67,11 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
+                var routing = c.UseTransport<RabbitMQTransport>()
+                    .ConnectionString("host=localhost")
+                    .UseConventionalRoutingTopology()
+                    .Routing();
+
                 var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyBaseEvent2), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
@@ -92,7 +100,11 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost").Routing();
+                var routing = c.UseTransport<RabbitMQTransport>()
+                    .ConnectionString("host=localhost")
+                    .UseConventionalRoutingTopology()
+                    .Routing();
+
                 var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyDerivedEvent2), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

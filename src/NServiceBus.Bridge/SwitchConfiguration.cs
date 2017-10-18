@@ -20,7 +20,7 @@ namespace NServiceBus.Bridge
             autoCreateQueuesIdentity = identity;
         }
 
-        public void InterceptForawrding(InterceptMessageForwarding interceptMethod)
+        public void InterceptForwarding(InterceptMessageForwarding interceptMethod)
         {
             InterceptMethod = interceptMethod ?? throw new ArgumentNullException(nameof(interceptMethod));
         }

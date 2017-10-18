@@ -21,7 +21,7 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
             extensions.ConnectionString(connString);
             extensions.UseForwardingTopology();
         });
-        bridgeConfig.InterceptForawrding((queue, message, method) =>
+        bridgeConfig.InterceptForwarding((queue, message, method) =>
         {
             using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
             {

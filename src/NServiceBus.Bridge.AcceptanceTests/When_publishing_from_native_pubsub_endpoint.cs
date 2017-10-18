@@ -16,7 +16,11 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
-        var bridgeConfiguration = Bridge.Between<RabbitMQTransport>("Left", t => t.ConnectionString("host=localhost")).And<MsmqTransport>("Right");
+        var bridgeConfiguration = Bridge.Between<RabbitMQTransport>("Left", t =>
+        {
+            t.ConnectionString("host=localhost");
+            t.UseConventionalRoutingTopology();
+        }).And<MsmqTransport>("Right");
         bridgeConfiguration.LimitMessageProcessingConcurrencyTo(1); //To ensure when tracer arrives the subscribe request has already been processed.
 
         var result = await Scenario.Define<Context>()
@@ -54,7 +58,9 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<RabbitMQTransport>().ConnectionString("host=localhost");
+                c.UseTransport<RabbitMQTransport>()
+                    .ConnectionString("host=localhost")
+                    .UseConventionalRoutingTopology();
             });
         }
 

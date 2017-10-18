@@ -10,10 +10,10 @@ using NServiceBus.Transport;
 class SendRouter : IRouter
 {
     EndpointInstances endpointInstances;
-    IDistributionPolicy distributionPolicy;
+    RawDistributionPolicy distributionPolicy;
     string localPortName;
 
-    public SendRouter(EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy, string localPortName = null)
+    public SendRouter(EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, string localPortName = null)
     {
         this.endpointInstances = endpointInstances;
         this.distributionPolicy = distributionPolicy;
@@ -50,7 +50,7 @@ class SendRouter : IRouter
     string SelectDestinationAddress(string endpoint, Func<EndpointInstance, string> resolveTransportAddress)
     {
         var candidates = endpointInstances.FindInstances(endpoint).Select(resolveTransportAddress).ToArray();
-        var selected = distributionPolicy.GetDistributionStrategy(endpoint, DistributionStrategyScope.Send).SelectReceiver(candidates);
+        var selected = distributionPolicy.GetDistributionStrategy(endpoint, DistributionStrategyScope.Send).SelectDestination(candidates);
         return selected;
     }
 }

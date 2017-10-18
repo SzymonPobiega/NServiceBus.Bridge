@@ -1,11 +1,12 @@
 
 using NServiceBus;
+using NServiceBus.Bridge;
 using NServiceBus.Routing;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
 class PubSubInfrastructure
 {
-    public PubSubInfrastructure(EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator)
+    public PubSubInfrastructure(EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator)
     {
         EndpointInstances = endpointInstances;
         DistributionPolicy = distributionPolicy;
@@ -23,6 +24,6 @@ class PubSubInfrastructure
     public ISubscriptionForwarder SubscribeForwarder { get; private set; }
     public ISubscriptionStorage SubscriptionStorage { get; private set; }
     public EndpointInstances EndpointInstances { get; }
-    public IDistributionPolicy DistributionPolicy { get; }
+    public RawDistributionPolicy DistributionPolicy { get; }
     public RuntimeTypeGenerator TypeGenerator { get; }
 }

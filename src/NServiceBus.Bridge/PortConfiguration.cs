@@ -42,7 +42,7 @@
             this.maximumConcurrency = maximumConcurrency;
         }
 
-        public DistributionPolicy DistributionPolicy { get; } = new DistributionPolicy();
+        public RawDistributionPolicy DistributionPolicy { get; } = new RawDistributionPolicy();
 
         public EndpointInstances EndpointInstances { get; } = new EndpointInstances();
 

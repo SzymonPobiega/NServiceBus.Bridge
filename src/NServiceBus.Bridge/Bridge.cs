@@ -29,7 +29,7 @@ class Bridge<TLeft, TRight> : IBridge
     IRouter replyRouter;
 
     public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, 
-        Action<EndpointConfiguration> subscriptionPersistenceConfig, IDistributionPolicy distributionPolicy, string poisonQueue, 
+        Action<EndpointConfiguration> subscriptionPersistenceConfig, RawDistributionPolicy distributionPolicy, string poisonQueue, 
         Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency,
         InterceptMessageForwarding interceptForward)
     {
