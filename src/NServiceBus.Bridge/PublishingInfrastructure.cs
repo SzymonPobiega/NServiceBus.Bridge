@@ -1,5 +1,4 @@
 
-using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Routing;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
