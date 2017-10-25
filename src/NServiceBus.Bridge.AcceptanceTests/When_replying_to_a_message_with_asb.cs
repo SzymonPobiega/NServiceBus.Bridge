@@ -6,6 +6,9 @@ using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
 using NServiceBus.AcceptanceTests.EndpointTemplates;
 using NServiceBus.Bridge;
+using NServiceBus.Configuration.AdvancedExtensibility;
+using NServiceBus.Serialization;
+using NServiceBus.Settings;
 using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
@@ -20,6 +23,9 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
             var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
             extensions.ConnectionString(connString);
             extensions.UseForwardingTopology();
+            var settings = extensions.GetSettings();
+            var serializer = Tuple.Create(new NewtonsoftSerializer() as SerializationDefinition, new SettingsHolder());
+            settings.Set("MainSerializer", serializer);
         });
         bridgeConfig.InterceptForwarding((queue, message, method) =>
         {
