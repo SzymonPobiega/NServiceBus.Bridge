@@ -8,6 +8,28 @@ using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
 class PubSubInfrastructureBuilderFeature : Feature
 {
+    public PubSubInfrastructureBuilderFeature()
+    {
+        Defaults(s =>
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.CreateInstance;
+            var parameters = new[]
+            {
+                typeof(LogicalAddress),
+                typeof(string),
+                typeof(string),
+                typeof(string),
+                typeof(TransportTransactionMode),
+                typeof(PushRuntimeSettings),
+                typeof(bool)
+            };
+            var ctor = typeof(Endpoint).Assembly.GetType("NServiceBus.ReceiveConfiguration", true).GetConstructor(flags, null, parameters, null);
+
+            var receiveConfig = ctor.Invoke(new object[]{null, s.EndpointName(),null, null, null, null, false});
+            s.Set("NServiceBus.ReceiveConfiguration", receiveConfig);
+        });
+    }
+
     protected override void Setup(FeatureConfigurationContext context)
     {
         var transportInfra = context.Settings.Get<TransportInfrastructure>();
