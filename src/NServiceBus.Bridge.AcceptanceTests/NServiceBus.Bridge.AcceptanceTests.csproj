@@ -8,8 +8,8 @@
     <PackageReference Include="NServiceBus.AcceptanceTesting" Version="7.0.0-*" />
     <PackageReference Include="NServiceBus.RabbitMQ" Version="5.0.0-*" />
     <PackageReference Include="NServiceBus.Azure.Transports.WindowsAzureServiceBus" Version="8.0.0-*" />
-    <PackageReference Include="NServiceBus.Persistence.Sql" Version="3.0.0-*" />
-    <PackageReference Include="NServiceBus.Persistence.Sql.MsBuild" Version="3.0.0-*" />
+    <PackageReference Include="NServiceBus.Persistence.Sql" Version="4.0.0-*" />
+    <PackageReference Include="NServiceBus.Persistence.Sql.MsBuild" Version="4.0.0-*" />
     <PackageReference Include="NServiceBus.Transport.Msmq" Version="1.0.0-*" />
     <PackageReference Include="NUnit" Version="3.7.*" />
   </ItemGroup>
