@@ -12,8 +12,9 @@ class Port<T> : IPort
     where T : TransportDefinition, new()
 {
     public string Name { get; }
-    public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, bool autoCreateQueues, string autoCreateQueuesIdentity)
+    public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity)
     {
+        this.interceptMethod = interceptMethod;
         Name = name;
         sendRouter = new SendRouter(endpointInstances, distributionPolicy, Name);
         replyRouter = new ReplyRouter();
@@ -40,6 +41,7 @@ class Port<T> : IPort
     {
         var dispatcherConfig = new EndpointConfiguration(name);
         dispatcherConfig.SendOnly();
+        dispatcherConfig.GetSettings().Set("NServiceBus.Bridge.LocalAddress", name);
         dispatcherConfig.EnableFeature<PubSubInfrastructureBuilderFeature>();
         dispatcherConfig.RegisterComponents(c =>
         {
@@ -62,7 +64,13 @@ class Port<T> : IPort
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
     }
 
-    public Task Forward(MessageContext context, PubSubInfrastructure inboundPubSubInfra)
+    public Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra)
+    {
+        return interceptMethod(source, context, sender.Dispatch, 
+            dispatch => Forward(source, context, inboundPubSubInfra, new InterceptingDispatcher(sender, dispatch)));
+    }
+
+    Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra, IRawEndpoint dispatcher)
     {
         var intent = GetMesssageIntent(context);
 
@@ -70,13 +78,13 @@ class Port<T> : IPort
         {
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
-                return SubscribeRouter.Route(context, intent, sender, pubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage);
+                return SubscribeRouter.Route(context, intent, dispatcher, pubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage, nullForwarding);
             case MessageIntentEnum.Publish:
-                return pubSubInfra.PublishRouter.Route(context, intent, sender);
+                return pubSubInfra.PublishRouter.Route(context, intent, dispatcher);
             case MessageIntentEnum.Send:
-                return sendRouter.Route(context, intent, sender);
+                return sendRouter.Route(context, dispatcher, nullForwarding);
             case MessageIntentEnum.Reply:
-                return replyRouter.Route(context, intent, sender);
+                return replyRouter.Route(context, intent, dispatcher);
             default:
                 throw new UnforwardableMessageException("Unroutable message intent: " + intent);
         }
@@ -129,6 +137,7 @@ class Port<T> : IPort
         }
     }
 
+    InterceptMessageForwarding interceptMethod;
     Func<MessageContext, PubSubInfrastructure, Task> onMessage;
     IEndpointInstance pubSubRoutingEndpoint;
     IReceivingRawEndpoint receiver;
@@ -140,4 +149,5 @@ class Port<T> : IPort
     PubSubInfrastructure pubSubInfra;
     SendRouter sendRouter;
     ReplyRouter replyRouter;
+    InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
 }

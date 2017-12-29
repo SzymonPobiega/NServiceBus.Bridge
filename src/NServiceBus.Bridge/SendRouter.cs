@@ -7,7 +7,7 @@ using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
-class SendRouter : IRouter
+class SendRouter
 {
     EndpointInstances endpointInstances;
     RawDistributionPolicy distributionPolicy;
@@ -20,13 +20,29 @@ class SendRouter : IRouter
         this.localPortName = localPortName;
     }
 
-    public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    public Task Route(MessageContext context, IRawEndpoint dispatcher, InterBridgeRoutingSettings routing)
     {
-        string destinationEndpoint;
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out destinationEndpoint))
+        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out var messageTypes))
+        {
+            throw new UnforwardableMessageException($"Sent message does not contain the '{Headers.EnclosedMessageTypes}' header.");
+        }
+        var rootType = messageTypes.Split(new [] {';'}, StringSplitOptions.RemoveEmptyEntries).First();
+        var rootTypeFullName = rootType.Split(new [] {','}, StringSplitOptions.RemoveEmptyEntries).First();
+
+        if (routing.SendRouteTable.TryGetValue(rootTypeFullName, out var nextHop))
+        {
+            return Forward(context, dispatcher, nextHop);
+        }
+
+        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var destinationEndpoint))
         {
             throw new UnforwardableMessageException("Sent message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
+        return Forward(context, dispatcher, destinationEndpoint);
+    }
+
+    Task Forward(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint)
+    {
         var address = SelectDestinationAddress(destinationEndpoint, i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)));
 
         if (context.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToHeader)

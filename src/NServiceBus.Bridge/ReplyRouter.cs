@@ -21,6 +21,10 @@ class ReplyRouter : IRouter
             {
                 replyTo = v;
             }
+            if (t == "id")
+            {
+                context.Headers[Headers.CorrelationId] = v;
+            }
         });
 
         if (replyTo == null)

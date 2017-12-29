@@ -1,43 +1,34 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Transactions;
+﻿using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
 using NServiceBus.AcceptanceTests.EndpointTemplates;
 using NServiceBus.Bridge;
-using NServiceBus.Configuration.AdvancedExtensibility;
-using NServiceBus.Serialization;
-using NServiceBus.Settings;
 using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
 [TestFixture]
-public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
+public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
 {
     [Test]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
-        var bridgeConfig = Bridge.Between<MsmqTransport>("Left").And<AzureServiceBusTransport>("Right", extensions =>
+        var leftBridge = Bridge.Between<MsmqTransport>("LeftMSMQ").And<RabbitMQTransport>("LeftRabbit", ext =>
         {
-            var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
-            extensions.ConnectionString(connString);
-            extensions.UseForwardingTopology();
-            var settings = extensions.GetSettings();
-            var serializer = Tuple.Create(new NewtonsoftSerializer() as SerializationDefinition, new SettingsHolder());
-            settings.Set("MainSerializer", serializer);
+            ext.ConnectionString("host=localhost");
+            ext.UseConventionalRoutingTopology();
         });
-        bridgeConfig.CircuitBreakerThreshold = int.MaxValue;
-        bridgeConfig.DelayedRetries = 0;
-        bridgeConfig.InterceptForwarding((queue, message, dispatch, forward) =>
+        leftBridge.Forwarding.ForwardTo(typeof(MyRequest).FullName, "RightRabbit");
+
+        var rightBridge = Bridge.Between<MsmqTransport>("RightMSMQ").And<RabbitMQTransport>("RightRabbit", ext =>
         {
-            using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
-            {
-                return forward(dispatch);
-            }
+            ext.ConnectionString("host=localhost");
+            ext.UseConventionalRoutingTopology();
         });
+
         var result = await Scenario.Define<Context>()
-            .With(bridgeConfig)
+            .With(leftBridge)
+            .With(rightBridge)
             .WithEndpoint<Sender>(c => c.When(s => s.Send(new MyRequest())))
             .WithEndpoint<Receiver>()
             .Done(c => c.RequestReceived && c.ResponseReceived)
@@ -60,7 +51,7 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.ConnectToBridge("Left");
+                var ramp = routing.ConnectToBridge("LeftMSMQ");
                 ramp.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Receiver)));
             });
         }
@@ -88,10 +79,8 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
-                var transport = c.UseTransport<AzureServiceBusTransport>();
-                transport.ConnectionString(connString);
-                transport.UseForwardingTopology();
+                //No bridge configuration needed for reply
+                c.UseTransport<MsmqTransport>();
             });
         }
 

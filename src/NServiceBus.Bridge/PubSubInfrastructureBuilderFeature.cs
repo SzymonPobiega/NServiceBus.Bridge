@@ -25,7 +25,7 @@ class PubSubInfrastructureBuilderFeature : Feature
             };
             var ctor = typeof(Endpoint).Assembly.GetType("NServiceBus.ReceiveConfiguration", true).GetConstructor(flags, null, parameters, null);
 
-            var receiveConfig = ctor.Invoke(new object[]{null, s.EndpointName(),null, null, null, null, false});
+            var receiveConfig = ctor.Invoke(new object[]{null, s.EndpointName(), s.Get<string>("NServiceBus.Bridge.LocalAddress"), null, null, null, false});
             s.Set("NServiceBus.ReceiveConfiguration", receiveConfig);
         });
     }
@@ -91,7 +91,7 @@ class PubSubInfrastructureBuilderFeature : Feature
         protected override Task OnStart(IMessageSession session)
         {
             var typeGenerator = new RuntimeTypeGenerator();
-            var forwarder = new NativeSubscriptionForwarder(subscriptionManager, typeGenerator);
+            var forwarder = new NativeSubscriptionForwarder(subscriptionManager, typeGenerator, pubSubInfrastructure.EndpointInstances);
             var publishRouter = new NativePublishRouter(typeGenerator);
             pubSubInfrastructure.Set(publishRouter, forwarder, new NativeSubscriptionStorage());
             return Task.CompletedTask;

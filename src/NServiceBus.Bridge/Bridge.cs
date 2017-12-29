@@ -12,26 +12,23 @@ class Bridge<TLeft, TRight> : IBridge
     where TLeft : TransportDefinition, new()
     where TRight : TransportDefinition, new()
 {
-    IEndpointInstance leftDispatcher;
-    IEndpointInstance rightDispatcher;
+    IEndpointInstance leftPubSubRunner;
+    IEndpointInstance rightPubSubRunner;
 
     IReceivingRawEndpoint rightEndpoint;
     IStartableRawEndpoint rightStartable;
     IReceivingRawEndpoint leftEndpoint;
     IStartableRawEndpoint leftStartable;
 
-    RawEndpointConfiguration leftConfig;
-    EndpointConfiguration leftDispatcherConfig;
-    RawEndpointConfiguration rightConfig;
-    EndpointConfiguration rightDispatcherConfig;
+    ThrottlingRawEndpointConfig<TLeft> leftConfig;
+    EndpointConfiguration leftPubSubInfraRunnerConfig;
+    ThrottlingRawEndpointConfig<TRight> rightConfig;
+    EndpointConfiguration rightPubSubInfraRunnerConfig;
 
-    IRouter sendRouter;
+    SendRouter sendRouter;
     IRouter replyRouter;
 
-    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, 
-        Action<EndpointConfiguration> subscriptionPersistenceConfig, RawDistributionPolicy distributionPolicy, string poisonQueue, 
-        Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency,
-        InterceptMessageForwarding interceptForward)
+    public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, Action<EndpointConfiguration> subscriptionPersistenceConfig, RawDistributionPolicy distributionPolicy, string poisonQueue, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency, InterceptMessageForwarding interceptForward, InterBridgeRoutingSettings forwarding, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
     {
         sendRouter = new SendRouter(endpointInstances, distributionPolicy);
         replyRouter = new ReplyRouter();
@@ -40,40 +37,46 @@ class Bridge<TLeft, TRight> : IBridge
         var leftPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
         var rightPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
 
-        leftConfig = RawEndpointConfiguration.Create(leftName, (context, _) => interceptForward(leftName, context, () => Forward(context, rightStartable, leftPubSubInfrastructure, rightPubSubInfrastructure)), poisonQueue);
-        var leftTransport = leftConfig.UseTransport<TLeft>();
-        SetTransportSpecificFlags(leftTransport.GetSettings(), poisonQueue);
-        leftCustomization?.Invoke(leftTransport);
-        if (autoCreateQueues)
-        {
-            leftConfig.AutoCreateQueue(autoCreateQueuesIdentity);
-        }
+        leftConfig = new ThrottlingRawEndpointConfig<TLeft>(leftName, poisonQueue, ext =>
+            {
+                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
+                leftCustomization?.Invoke(ext);
+            },
+            (context, _) => interceptForward(leftName, context, rightStartable.Dispatch, 
+                dispatch => Forward(context, Intercept(rightStartable, dispatch), leftPubSubInfrastructure, rightPubSubInfrastructure, forwarding)),
+            (context, dispatcher) => null,
+            maximumConcurrency,
+            immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
 
-        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues);
 
-        rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => interceptForward(rightName, context, () => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure)), poisonQueue);
-        var rightTransport = rightConfig.UseTransport<TRight>();
-        SetTransportSpecificFlags(rightTransport.GetSettings(), poisonQueue);
-        rightCustomization?.Invoke(rightTransport);
-        if (autoCreateQueues)
-        {
-            rightConfig.AutoCreateQueue(autoCreateQueuesIdentity);
-        }
+        leftPubSubInfraRunnerConfig = CreatePubSubInfraRunnerConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues);
 
-        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure, autoCreateQueues);
+        var nullForwarding = new InterBridgeRoutingSettings(); //Messages from right to left are not forwarded by design.
+        rightConfig = new ThrottlingRawEndpointConfig<TRight>(rightName, poisonQueue, ext =>
+            {
+                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
+                rightCustomization?.Invoke(ext);
+            },
+            (context, _) => interceptForward(rightName, context, leftStartable.Dispatch, 
+                dispatch => Forward(context, Intercept(leftStartable, dispatch), rightPubSubInfrastructure, leftPubSubInfrastructure, nullForwarding)),
+            (context, dispatcher) => null,
+            maximumConcurrency,
+            immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
 
-        if (maximumConcurrency.HasValue)
-        {
-            leftConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
-            rightConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
-        }
+        rightPubSubInfraRunnerConfig = CreatePubSubInfraRunnerConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure, autoCreateQueues);
     }
 
-    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues)
+    static IRawEndpoint Intercept(IRawEndpoint impl, Dispatch intercept)
+    {
+        return new InterceptingDispatcher(impl, intercept);
+    }
+
+    static EndpointConfiguration CreatePubSubInfraRunnerConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues)
         where TTransport : TransportDefinition, new()
     {
         var dispatcherConfig = new EndpointConfiguration(name);
         dispatcherConfig.SendOnly();
+        dispatcherConfig.GetSettings().Set("NServiceBus.Bridge.LocalAddress", name);
         dispatcherConfig.EnableFeature<PubSubInfrastructureBuilderFeature>();
         dispatcherConfig.RegisterComponents(c =>
         {
@@ -96,7 +99,7 @@ class Bridge<TLeft, TRight> : IBridge
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
     }
 
-    Task Forward(MessageContext context, IRawEndpoint dispatcher, PubSubInfrastructure inboundPubSubInfra, PubSubInfrastructure outboundPubSubInfra)
+    Task Forward(MessageContext context, IRawEndpoint dispatcher, PubSubInfrastructure inboundPubSubInfra, PubSubInfrastructure outboundPubSubInfra, InterBridgeRoutingSettings forwarding)
     {
         var intent = GetMesssageIntent(context);
 
@@ -104,9 +107,9 @@ class Bridge<TLeft, TRight> : IBridge
         {
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
-                return SubscribeRouter.Route(context, intent, dispatcher, outboundPubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage);
+                return SubscribeRouter.Route(context, intent, dispatcher, outboundPubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage, forwarding);
             case MessageIntentEnum.Send:
-                return sendRouter.Route(context, intent, dispatcher);
+                return sendRouter.Route(context, dispatcher, forwarding);
             case MessageIntentEnum.Publish:
                 return outboundPubSubInfra.PublishRouter.Route(context, intent, dispatcher);
             case MessageIntentEnum.Reply:
@@ -128,13 +131,13 @@ class Bridge<TLeft, TRight> : IBridge
 
     public async Task Start()
     {
-        leftDispatcher = await Endpoint.Start(leftDispatcherConfig).ConfigureAwait(false);
-        rightDispatcher = await Endpoint.Start(rightDispatcherConfig).ConfigureAwait(false);
+        leftPubSubRunner = await Endpoint.Start(leftPubSubInfraRunnerConfig).ConfigureAwait(false);
+        rightPubSubRunner = await Endpoint.Start(rightPubSubInfraRunnerConfig).ConfigureAwait(false);
 
         //At this stage the pubsub infrastructure is set up.
 
-        leftStartable = await RawEndpoint.Create(leftConfig).ConfigureAwait(false);
-        rightStartable = await RawEndpoint.Create(rightConfig).ConfigureAwait(false);
+        leftStartable = await leftConfig.Create().ConfigureAwait(false);
+        rightStartable = await rightConfig.Create().ConfigureAwait(false);
 
         leftEndpoint = await leftStartable.Start().ConfigureAwait(false);
         rightEndpoint = await rightStartable.Start().ConfigureAwait(false);
@@ -142,13 +145,13 @@ class Bridge<TLeft, TRight> : IBridge
 
     public async Task Stop()
     {
-        if (leftDispatcher != null)
+        if (leftPubSubRunner != null)
         {
-            await leftDispatcher.Stop().ConfigureAwait(false);
+            await leftPubSubRunner.Stop().ConfigureAwait(false);
         }
-        if (rightDispatcher != null)
+        if (rightPubSubRunner != null)
         {
-            await rightDispatcher.Stop().ConfigureAwait(false);
+            await rightPubSubRunner.Stop().ConfigureAwait(false);
         }
 
         IStoppableRawEndpoint leftStoppable = null;

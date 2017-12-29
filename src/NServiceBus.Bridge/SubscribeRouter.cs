@@ -10,7 +10,7 @@ using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
 class SubscribeRouter
 {
-    public static async Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher, ISubscriptionForwarder forwarder, ISubscriptionStorage subscriptionStorage)
+    public static async Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher, ISubscriptionForwarder forwarder, ISubscriptionStorage subscriptionStorage, InterBridgeRoutingSettings forwarding)
     {
         var messageTypeString = GetSubscriptionMessageTypeFrom(context);
 
@@ -28,7 +28,7 @@ class SubscribeRouter
         string subscriberEndpoint = null;
         string publisherEndpoint;
 
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out publisherEndpoint))
+        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out publisherEndpoint) && forwarder.RequiresPublisherEndpoint)
         {
             throw new UnforwardableMessageException("Subscription message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
@@ -52,12 +52,12 @@ class SubscribeRouter
         if (intent == MessageIntentEnum.Subscribe)
         {
             await subscriptionStorage.Subscribe(subscriber, messageType, new ContextBag()).ConfigureAwait(false);
-            await forwarder.ForwardSubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
+            await forwarder.ForwardSubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
         }
         else
         {
             await subscriptionStorage.Unsubscribe(subscriber, messageType, new ContextBag()).ConfigureAwait(false);
-            await forwarder.ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher).ConfigureAwait(false);
+            await forwarder.ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
         }
     }
     
