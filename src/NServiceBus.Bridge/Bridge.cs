@@ -44,7 +44,7 @@ class Bridge<TLeft, TRight> : IBridge
             },
             (context, _) => interceptForward(leftName, context, rightStartable.Dispatch, 
                 dispatch => Forward(context, Intercept(rightStartable, dispatch), leftPubSubInfrastructure, rightPubSubInfrastructure, forwarding)),
-            (context, dispatcher) => null,
+            (context, dispatcher) => context.MoveToErrorQueue(poisonQueue),
             maximumConcurrency,
             immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
 

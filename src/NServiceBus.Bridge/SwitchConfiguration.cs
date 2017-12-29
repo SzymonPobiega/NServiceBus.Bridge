@@ -10,7 +10,7 @@ namespace NServiceBus.Bridge
             where T : TransportDefinition, new()
         {
             var portConfig = new PortConfiguration<T>(name, customization);
-            PortFactories.Add(() => portConfig.Create(typeGenerator, "poison", autoCreateQueues, autoCreateQueuesIdentity, InterceptMethod));
+            PortFactories.Add(() => portConfig.Create(typeGenerator, "poison", autoCreateQueues, autoCreateQueuesIdentity, InterceptMethod, ImmediateRetries, DelayedRetries, CircuitBreakerThreshold));
             return portConfig;
         }
 
@@ -19,6 +19,10 @@ namespace NServiceBus.Bridge
             autoCreateQueues = true;
             autoCreateQueuesIdentity = identity;
         }
+
+        public int ImmediateRetries { get; set; } = 5;
+        public int DelayedRetries { get; set; } = 5;
+        public int CircuitBreakerThreshold { get; set; } = 5;
 
         public void InterceptForwarding(InterceptMessageForwarding interceptMethod)
         {

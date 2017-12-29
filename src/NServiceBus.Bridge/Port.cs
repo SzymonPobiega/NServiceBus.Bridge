@@ -12,7 +12,7 @@ class Port<T> : IPort
     where T : TransportDefinition, new()
 {
     public string Name { get; }
-    public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity)
+    public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
     {
         this.interceptMethod = interceptMethod;
         Name = name;
@@ -20,19 +20,16 @@ class Port<T> : IPort
         replyRouter = new ReplyRouter();
         pubSubInfra = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
 
-        rawConfig = RawEndpointConfiguration.Create(name, (context, _) => onMessage(context, pubSubInfra), poisonQueue);
+        rawConfig = new ThrottlingRawEndpointConfig<T>(name, poisonQueue, ext =>
+            {
+                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
+                transportCustomization?.Invoke(ext);
+            },
+            (context, _) => onMessage(context, pubSubInfra),
+            (context, dispatcher) => context.MoveToErrorQueue(poisonQueue),
+            maximumConcurrency,
+            immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
 
-        var transport = rawConfig.UseTransport<T>();
-        SetTransportSpecificFlags(transport.GetSettings(), poisonQueue);
-        transportCustomization?.Invoke(transport);
-        if (autoCreateQueues)
-        {
-            rawConfig.AutoCreateQueue(autoCreateQueuesIdentity);
-        }
-        if (maximumConcurrency.HasValue)
-        {
-            rawConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
-        }
         routerEndpointConfig = CreatePubSubRoutingEndpoint(name, subscriptionPersistenceConfig, poisonQueue, transportCustomization, pubSubInfra);
     }
 
@@ -67,10 +64,10 @@ class Port<T> : IPort
     public Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra)
     {
         return interceptMethod(source, context, sender.Dispatch, 
-            dispatch => Forward(source, context, inboundPubSubInfra, new InterceptingDispatcher(sender, dispatch)));
+            dispatch => Forward(context, inboundPubSubInfra, new InterceptingDispatcher(sender, dispatch)));
     }
 
-    Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra, IRawEndpoint dispatcher)
+    Task Forward(MessageContext context, PubSubInfrastructure inboundPubSubInfra, IRawEndpoint dispatcher)
     {
         var intent = GetMesssageIntent(context);
 
@@ -104,7 +101,7 @@ class Port<T> : IPort
     {
         this.onMessage = onMessage;
         pubSubRoutingEndpoint = await Endpoint.Start(routerEndpointConfig).ConfigureAwait(false);
-        sender = await RawEndpoint.Create(rawConfig).ConfigureAwait(false);
+        sender = await rawConfig.Create().ConfigureAwait(false);
     }
 
     public async Task StartReceiving()
@@ -144,7 +141,7 @@ class Port<T> : IPort
     IStartableRawEndpoint sender;
     IStoppableRawEndpoint stoppable;
 
-    RawEndpointConfiguration rawConfig;
+    ThrottlingRawEndpointConfig<T> rawConfig;
     EndpointConfiguration routerEndpointConfig;
     PubSubInfrastructure pubSubInfra;
     SendRouter sendRouter;

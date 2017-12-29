@@ -46,10 +46,10 @@
 
         public EndpointInstances EndpointInstances { get; } = new EndpointInstances();
 
-        internal IPort Create(RuntimeTypeGenerator typeGenerator, string poisonQueue, bool? hubAutoCreateQueues, string hubAutoCreateQueuesIdentity, InterceptMessageForwarding interceptMethod)
+        internal IPort Create(RuntimeTypeGenerator typeGenerator, string poisonQueue, bool? hubAutoCreateQueues, string hubAutoCreateQueuesIdentity, InterceptMessageForwarding interceptMethod, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
         {
             return new Port<T>(Name, customization, subscriptionPersistenceConfig, EndpointInstances, DistributionPolicy, typeGenerator, poisonQueue, maximumConcurrency, interceptMethod,
-                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity);
+                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity, immediateRetries, delayedRetries, circuitBreakerThreshold);
         }
     }
 }
