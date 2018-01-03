@@ -16,9 +16,9 @@ public static class ConfigureEndpointMsmqTransport
 
     public static Task DeleteQueue(RunSummary summary, string queue)
     {
-        if (!summary.RunDescriptor.Settings.TryGet(out MessageQueue[] allQueues))
+        if (!summary.RunDescriptor.Settings.TryGet(out List<MessageQueue> allQueues))
         {
-            allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
+            allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost").ToList();
             summary.RunDescriptor.Settings.Set(allQueues);
         }
         var queuesToBeDeleted = new List<string>();
@@ -31,6 +31,7 @@ public static class ConfigureEndpointMsmqTransport
                 if (messageQueue.QueueName.StartsWith(@"private$\" + localQueueName, StringComparison.OrdinalIgnoreCase))
                 {
                     queuesToBeDeleted.Add(messageQueue.Path);
+                    allQueues.Remove(messageQueue);
                 }
             }
         }
