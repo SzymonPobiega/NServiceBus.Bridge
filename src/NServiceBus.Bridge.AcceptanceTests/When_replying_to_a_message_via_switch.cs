@@ -60,7 +60,7 @@ public class When_replying_to_a_message_via_switch : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("Port1");
                 bridge.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Sender2)));
             });
@@ -107,7 +107,7 @@ public class When_replying_to_a_message_via_switch : NServiceBusAcceptanceTest
             {
                 var sender3 = Conventions.EndpointNamingConvention(typeof(Sender3));
 
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("Port2");
                 bridge.RouteToEndpoint(typeof(MyRequest), sender3);
                 bridge.SetPort(sender3, "Port3");
@@ -153,7 +153,7 @@ public class When_replying_to_a_message_via_switch : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("Port3");
                 bridge.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Sender1)));
             });

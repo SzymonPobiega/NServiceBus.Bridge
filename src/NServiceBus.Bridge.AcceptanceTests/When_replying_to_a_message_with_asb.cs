@@ -13,6 +13,7 @@ using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
 [TestFixture]
+[Explicit("ASB integration is covered in NSB.Raw tests.")]
 public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
 {
     [Test]

@@ -6,14 +6,6 @@
 
     public static class ConfigureExtensions
     {
-        public static Task DefineTransport(this EndpointConfiguration config, RunDescriptor runDescriptor, EndpointCustomizationConfiguration endpointCustomizationConfiguration)
-        {
-            //var transportConfiguration = new ConfigureEndpointMsmqTransport();
-            //await transportConfiguration.Configure(endpointCustomizationConfiguration.EndpointName, config, runDescriptor.Settings, endpointCustomizationConfiguration.PublisherMetadata);
-            //runDescriptor.OnTestCompleted(_ => transportConfiguration.Cleanup());
-            return Task.CompletedTask;
-        }
-
         public static async Task DefinePersistence(this EndpointConfiguration config, RunDescriptor runDescriptor, EndpointCustomizationConfiguration endpointCustomizationConfiguration)
         {
             var persistenceConfiguration = new ConfigureEndpointInMemoryPersistence();

@@ -13,16 +13,8 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
     [Test]
     public async Task It_should_deliver_the_message()
     {
-        var leftBridge = Bridge.Between<MsmqTransport>("LeftMSMQ").And<RabbitMQTransport>("LeftRabbit", ext =>
-        {
-            ext.ConnectionString("host=localhost");
-            ext.UseConventionalRoutingTopology();
-        });
-        var rightBridge = Bridge.Between<MsmqTransport>("RightMSMQ").And<RabbitMQTransport>("RightRabbit", ext =>
-        {
-            ext.ConnectionString("host=localhost");
-            ext.UseConventionalRoutingTopology();
-        });
+        var leftBridge = Bridge.Between<MsmqTransport>("LeftMSMQ").And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
+        var rightBridge = Bridge.Between<MsmqTransport>("RightMSMQ").And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
         rightBridge.Forwarding.RegisterPublisher(typeof(MyEvent).FullName, "LeftRabbit");
         var result = await Scenario.Define<Context>()
             .With(leftBridge)
@@ -48,7 +40,7 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>();
+                c.UseTransport<MsmqTransport>().Configure();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -64,9 +56,9 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
-                var ramp = routing.ConnectToBridge("RightMSMQ");
-                ramp.RegisterPublisher(typeof(MyEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
+                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var bridge = routing.ConnectToBridge("RightMSMQ");
+                bridge.RegisterPublisher(typeof(MyEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }
 

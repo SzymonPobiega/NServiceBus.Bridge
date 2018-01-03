@@ -2,11 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
     using AcceptanceTesting.Customization;
     using AcceptanceTesting.Support;
     using Configuration.AdvancedExtensibility;
     using Features;
+    using Transport;
 
     public class DefaultServer : IEndpointSetupTemplate
     {
@@ -41,8 +43,6 @@
             configuration.SendFailedMessagesTo("error");
             configuration.UseSerialization<NewtonsoftSerializer>();
 
-            await configuration.DefineTransport(runDescriptor, endpointConfiguration).ConfigureAwait(false);
-
             configuration.RegisterComponentsAndInheritanceHierarchy(runDescriptor);
 
             await configuration.DefinePersistence(runDescriptor, endpointConfiguration).ConfigureAwait(false);
@@ -52,6 +52,18 @@
 
             //Hack to make other transports work when RabbitMQ is referenced
             configuration.GetSettings().Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", false);
+
+            var transportDef = configuration.GetSettings().Get<TransportDefinition>();
+            var queueBindings = configuration.GetSettings().Get<QueueBindings>();
+
+            runDescriptor.OnTestCompleted(async summary =>
+            {
+                var allQueues = queueBindings.ReceivingAddresses.Concat(queueBindings.SendingAddresses);
+                foreach (var queue in allQueues)
+                {
+                    await CleanUpHelper.CleanupQueue(summary, queue, transportDef.GetType());
+                }
+            });
 
             return configuration;
         }

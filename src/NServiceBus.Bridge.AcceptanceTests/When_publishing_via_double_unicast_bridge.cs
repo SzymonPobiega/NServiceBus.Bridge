@@ -53,7 +53,7 @@ public class When_publishing_via_double_unicast_bridge : NServiceBusAcceptanceTe
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>();
+                c.UseTransport<MsmqTransport>().Configure();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -69,7 +69,7 @@ public class When_publishing_via_double_unicast_bridge : NServiceBusAcceptanceTe
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
                 var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NServiceBus.AcceptanceTesting.Support;
@@ -17,9 +18,25 @@ class SwitchComponent : IComponentBehavior
     public Task<ComponentRunner> CreateRunner(RunDescriptor run)
     {
         config.AutoCreateQueues();
-        var hub = Switch.Create(config);
 
-        return Task.FromResult<ComponentRunner>(new Runner(hub, "Switch"));
+        var newFactories = new List<Func<IPort>>();
+
+        foreach (var factory in config.PortFactories)
+        {
+            IPort NewFactory()
+            {
+                var port = factory();
+                var portType = port.GetType();
+                var portTransportType = portType.GetGenericArguments()[0];
+                run.OnTestCompleted(summary => CleanUpHelper.CleanupQueue(summary, port.Name, portTransportType));
+                return port;
+            }
+            newFactories.Add(NewFactory);
+        }
+
+        config.PortFactories = newFactories;
+        var @switch = Switch.Create(config);
+        return Task.FromResult<ComponentRunner>(new Runner(@switch, "Switch"));
     }
 
     class Runner : ComponentRunner

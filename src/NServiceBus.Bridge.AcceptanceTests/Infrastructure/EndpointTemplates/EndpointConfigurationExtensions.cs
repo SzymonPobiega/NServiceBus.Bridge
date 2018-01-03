@@ -1,12 +1,19 @@
 ﻿namespace NServiceBus.AcceptanceTests
 {
+    using System;
+    using AcceptanceTesting.Support;
     using Configuration.AdvancedExtensibility;
 
     public static class EndpointConfigurationExtensions
     {
-        public static TransportExtensions ConfigureTransport(this EndpointConfiguration endpointConfiguration)
+        public static void ConfigureTransport<T>(this EndpointConfiguration endpointConfiguration, Action<TransportExtensions> configureTransport = null)
+            where T : IConfigureEndpointTestExecution, new()
         {
-            return new TransportExtensions(endpointConfiguration.GetSettings());
+            var config = new T
+            {
+                ConfigureTransport = configureTransport
+            };
+            endpointConfiguration.GetSettings().Set<IConfigureEndpointTestExecution>(config);
         }
     }
 }
