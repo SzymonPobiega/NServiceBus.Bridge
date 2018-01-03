@@ -7,7 +7,7 @@ namespace NServiceBus.Bridge
         public static ISwitch Create(SwitchConfiguration config)
         {
             var ports = config.PortFactories.Select(x => x()).ToArray();
-            return new SwitchImpl(ports, config.PortTable, config.InterceptMethod);
+            return new SwitchImpl(ports, config.PortTable);
         }
     }
 }

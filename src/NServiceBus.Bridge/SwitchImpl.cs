@@ -8,10 +8,9 @@ using NServiceBus.Transport;
 
 class SwitchImpl : ISwitch
 {
-    public SwitchImpl(IPort[] ports, Dictionary<string, string> routeTable, InterceptMessageForwarding configInterceptMethod)
+    public SwitchImpl(IPort[] ports, Dictionary<string, string> routeTable)
     {
         this.routeTable = routeTable;
-        this.configInterceptMethod = configInterceptMethod;
         this.ports = ports.ToDictionary(x => x.Name, x => x);
     }
 
@@ -109,5 +108,4 @@ class SwitchImpl : ISwitch
 
     Dictionary<string, IPort> ports;
     Dictionary<string, string> routeTable;
-    InterceptMessageForwarding configInterceptMethod;
 }
