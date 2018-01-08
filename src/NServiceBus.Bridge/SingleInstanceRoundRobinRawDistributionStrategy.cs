@@ -2,6 +2,9 @@
 {
     using System.Threading;
 
+    /// <summary>
+    /// A default distribution strategy that sends messages to multiple instances of a destination endpoint in a round-robin manner.
+    /// </summary>
     public class SingleInstanceRoundRobinRawDistributionStrategy : RawDistributionStrategy
     {
         long index = -1;

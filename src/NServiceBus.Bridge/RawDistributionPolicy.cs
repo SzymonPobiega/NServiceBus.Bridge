@@ -3,6 +3,9 @@
     using System;
     using System.Collections.Concurrent;
 
+    /// <summary>
+    /// Allows configuring distribution strategies for endpoints.
+    /// </summary>
     public class RawDistributionPolicy
     {
         private ConcurrentDictionary<Tuple<string, DistributionStrategyScope>, RawDistributionStrategy> configuredStrategies = new ConcurrentDictionary<Tuple<string, DistributionStrategyScope>, RawDistributionStrategy>();

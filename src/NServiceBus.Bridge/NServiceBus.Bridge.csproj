@@ -4,7 +4,7 @@
     <OutputPath>..\..\binaries</OutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>NServiceBus.Bridge</RootNamespace>
-    <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="4.0.0-*" PrivateAssets="All" />
