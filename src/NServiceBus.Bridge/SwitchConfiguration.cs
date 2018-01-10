@@ -62,7 +62,7 @@ namespace NServiceBus.Bridge
         /// </summary>
         public Dictionary<string, string> PortTable { get; } = new Dictionary<string, string>();
 
-        internal InterceptMessageForwarding InterceptMethod = (queue, message, dispatch, forward) => forward(dispatch);
+        internal InterceptMessageForwarding InterceptMethod = (queue, message, dispatchLocal, dispatchForward, forward) => forward(dispatchForward);
         bool? autoCreateQueues;
         string autoCreateQueuesIdentity;
         RuntimeTypeGenerator typeGenerator = new RuntimeTypeGenerator();

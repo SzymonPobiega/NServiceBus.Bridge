@@ -8,7 +8,7 @@
     /// <summary>
     /// Allows to execute arbitrary code before forwarding a message.
     /// </summary>
-    public delegate Task InterceptMessageForwarding(string inputQueue, MessageContext message, Dispatch dispatchMethod, Func<Dispatch, Task> forwardMethod);
+    public delegate Task InterceptMessageForwarding(string inputQueue, MessageContext message, Dispatch dispatchToSameSide, Dispatch dispatchToOtherSide, Func<Dispatch, Task> forwardMethod);
 
     /// <summary>
     /// Represents a call to message dispatcher.

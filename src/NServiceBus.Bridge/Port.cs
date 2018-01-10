@@ -25,8 +25,8 @@ class Port<T> : IPort
                 SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
                 transportCustomization?.Invoke(ext);
             },
-            (context, _) => onMessage(context, pubSubInfra),
-            (context, dispatcher) => context.MoveToErrorQueue(poisonQueue),
+            (context, dispatcher) => onMessage(context, pubSubInfra, dispatcher),
+            (context, _) => context.MoveToErrorQueue(poisonQueue),
             maximumConcurrency,
             immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
 
@@ -61,9 +61,9 @@ class Port<T> : IPort
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
     }
 
-    public Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra)
+    public Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra, IDispatchMessages sourceDispatcher)
     {
-        return interceptMethod(source, context, sender.Dispatch, 
+        return interceptMethod(source, context, (messages, transaction, bag) => sourceDispatcher.Dispatch(messages, transaction, bag), sender.Dispatch, 
             dispatch => Forward(context, inboundPubSubInfra, new InterceptingDispatcher(sender, dispatch)));
     }
 
@@ -97,7 +97,7 @@ class Port<T> : IPort
         return messageIntent;
     }
 
-    public async Task Initialize(Func<MessageContext, PubSubInfrastructure, Task> onMessage)
+    public async Task Initialize(Func<MessageContext, PubSubInfrastructure, IDispatchMessages, Task> onMessage)
     {
         this.onMessage = onMessage;
         pubSubRoutingEndpoint = await Endpoint.Start(routerEndpointConfig).ConfigureAwait(false);
@@ -135,7 +135,7 @@ class Port<T> : IPort
     }
 
     InterceptMessageForwarding interceptMethod;
-    Func<MessageContext, PubSubInfrastructure, Task> onMessage;
+    Func<MessageContext, PubSubInfrastructure, IDispatchMessages, Task> onMessage;
     IEndpointInstance pubSubRoutingEndpoint;
     IReceivingRawEndpoint receiver;
     IStartableRawEndpoint sender;

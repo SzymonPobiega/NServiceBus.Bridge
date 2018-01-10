@@ -42,7 +42,7 @@ class Bridge<TLeft, TRight> : IBridge
                 SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
                 leftCustomization?.Invoke(ext);
             },
-            (context, _) => interceptForward(leftName, context, rightStartable.Dispatch, 
+            (context, dispatcher) => interceptForward(leftName, context, (messages, transaction, bag) => dispatcher.Dispatch(messages, transaction, bag), rightStartable.Dispatch, 
                 dispatch => Forward(context, Intercept(rightStartable, dispatch), leftPubSubInfrastructure, rightPubSubInfrastructure, forwarding)),
             (context, dispatcher) => context.MoveToErrorQueue(poisonQueue),
             maximumConcurrency,
@@ -57,7 +57,7 @@ class Bridge<TLeft, TRight> : IBridge
                 SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
                 rightCustomization?.Invoke(ext);
             },
-            (context, _) => interceptForward(rightName, context, leftStartable.Dispatch, 
+            (context, dispatcher) => interceptForward(rightName, context, (messages, transaction, bag) => dispatcher.Dispatch(messages, transaction, bag), leftStartable.Dispatch, 
                 dispatch => Forward(context, Intercept(leftStartable, dispatch), rightPubSubInfrastructure, leftPubSubInfrastructure, nullForwarding)),
             (context, dispatcher) => null,
             maximumConcurrency,

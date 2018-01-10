@@ -24,7 +24,7 @@
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
-        InterceptMessageForwarding interceptForwarding = (queue, message, dispatch, forward) => forward(dispatch);
+        InterceptMessageForwarding interceptForwarding = (queue, message, dispatchLocal, dispatchForward, forward) => forward(dispatchForward);
 
         internal BridgeConfiguration(string leftName, string rightName, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization)
         {
