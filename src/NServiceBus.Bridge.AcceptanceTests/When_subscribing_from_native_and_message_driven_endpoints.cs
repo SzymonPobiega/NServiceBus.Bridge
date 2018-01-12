@@ -24,7 +24,7 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
                 cfg.AddPort<RabbitMQTransport>("Port1", t => t.Configure()).LimitMessageProcessingConcurrencyTo(1);
 
                 //BaseEventSubscriber - MSMQ
-                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
 
                 //DerivedEventSubscriber - RabbitMQ
                 cfg.AddPort<RabbitMQTransport>("Port3", t => t.Configure());
