@@ -30,7 +30,7 @@
         /// </summary>
         /// <typeparam name="TPersistence">Type of persistence.</typeparam>
         /// <param name="subscriptionPersistenceConfiguration">A callback for configuring selected persistence.</param>
-        public void UseSubscriptionPersistece<TPersistence>(Action<PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
+        public void UseSubscriptionPersistence<TPersistence>(Action<PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
             where TPersistence : PersistenceDefinition
         {
             this.subscriptionPersistenceConfig = e =>
