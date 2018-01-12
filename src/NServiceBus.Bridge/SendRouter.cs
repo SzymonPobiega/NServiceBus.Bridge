@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus;
@@ -43,10 +44,12 @@ class SendRouter
 
     Task Forward(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint)
     {
+        var forwardedHeaders = new Dictionary<string, string>(context.Headers);
+
         var address = SelectDestinationAddress(destinationEndpoint, i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)));
 
-        if (context.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToHeader)
-            && context.Headers.TryGetValue(Headers.CorrelationId, out var correlationId))
+        if (forwardedHeaders.TryGetValue(Headers.ReplyToAddress, out var replyToHeader)
+            && forwardedHeaders.TryGetValue(Headers.CorrelationId, out var correlationId))
         {
             // pipe-separated TLV format
             var newCorrelationId = $"id|{correlationId.Length}|{correlationId}|reply-to|{replyToHeader.Length}|{replyToHeader}";
@@ -54,11 +57,11 @@ class SendRouter
             {
                 newCorrelationId += $"|port|{localPortName.Length}|{localPortName}";
             }
-            context.Headers[Headers.CorrelationId] = newCorrelationId;
+            forwardedHeaders[Headers.CorrelationId] = newCorrelationId;
         }
-        context.Headers[Headers.ReplyToAddress] = dispatcher.TransportAddress;
+        forwardedHeaders[Headers.ReplyToAddress] = dispatcher.TransportAddress;
 
-        var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);
+        var outgoingMessage = new OutgoingMessage(context.MessageId, forwardedHeaders, context.Body);
         var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(address));
         return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);
     }
