@@ -1,7 +1,6 @@
 namespace NServiceBus.Bridge
 {
     using System;
-    using Routing;
 
     /// <summary>
     /// Determines which instance of a given endpoint a message is to be sent.
