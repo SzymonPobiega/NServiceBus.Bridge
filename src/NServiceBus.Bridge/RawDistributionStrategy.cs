@@ -9,7 +9,7 @@ namespace NServiceBus.Bridge
     public abstract class RawDistributionStrategy
     {
         /// <summary>
-        /// Creates a new <see cref="DistributionStrategy"/>.
+        /// Creates a new <see cref="RawDistributionStrategy"/>.
         /// </summary>
         /// <param name="endpoint">The name of the endpoint this distribution strategy resolves instances for.</param>
         /// <param name="scope">The scope for this strategy.</param>
