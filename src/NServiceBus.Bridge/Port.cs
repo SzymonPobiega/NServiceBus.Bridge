@@ -14,6 +14,7 @@ class Port<T> : IPort
     public string Name { get; }
     public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, bool autoCreateQueues, string autoCreateQueuesIdentity)
     {
+        this.typeGenerator = typeGenerator;
         Name = name;
         sendRouter = new SendRouter(endpointInstances, distributionPolicy, Name);
         replyRouter = new ReplyRouter();
@@ -32,7 +33,11 @@ class Port<T> : IPort
         {
             rawConfig.LimitMessageProcessingConcurrencyTo(maximumConcurrency.Value);
         }
-        routerEndpointConfig = CreatePubSubRoutingEndpoint(name, subscriptionPersistenceConfig, poisonQueue, transportCustomization, pubSubInfra);
+
+        if (new T() is IMessageDrivenSubscriptionTransport)
+        {
+            routerEndpointConfig = CreatePubSubRoutingEndpoint(name, subscriptionPersistenceConfig, poisonQueue, transportCustomization, pubSubInfra);
+        }
     }
 
     static EndpointConfiguration CreatePubSubRoutingEndpoint<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure)
@@ -95,8 +100,19 @@ class Port<T> : IPort
     public async Task Initialize(Func<MessageContext, PubSubInfrastructure, Task> onMessage)
     {
         this.onMessage = onMessage;
-        pubSubRoutingEndpoint = await Endpoint.Start(routerEndpointConfig).ConfigureAwait(false);
         sender = await RawEndpoint.Create(rawConfig).ConfigureAwait(false);
+
+        if (routerEndpointConfig != null)
+        {
+            pubSubRoutingEndpoint = await Endpoint.Start(routerEndpointConfig).ConfigureAwait(false);
+        }
+        else
+        {
+            var subscriptionManager = SubscriptionManagerHelper.CreateSubscriptionManager(sender.Settings.Get<TransportInfrastructure>());
+            var forwarder = new NativeSubscriptionForwarder(subscriptionManager, typeGenerator);
+            var publishRouter = new NativePublishRouter(typeGenerator);
+            pubSubInfra.Set(publishRouter, forwarder, new NativeSubscriptionStorage());
+        }
     }
 
     public async Task StartReceiving()
@@ -129,6 +145,7 @@ class Port<T> : IPort
         }
     }
 
+    RuntimeTypeGenerator typeGenerator;
     Func<MessageContext, PubSubInfrastructure, Task> onMessage;
     IEndpointInstance pubSubRoutingEndpoint;
     IReceivingRawEndpoint receiver;
