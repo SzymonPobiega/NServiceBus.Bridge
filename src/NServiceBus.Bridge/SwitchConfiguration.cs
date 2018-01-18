@@ -10,7 +10,7 @@ namespace NServiceBus.Bridge
             where T : TransportDefinition, new()
         {
             var portConfig = new PortConfiguration<T>(name, customization);
-            PortFactories.Add(() => portConfig.Create(typeGenerator, "poison", autoCreateQueues, autoCreateQueuesIdentity));
+            PortFactories.Add(() => portConfig.Create(TypeGenerator, "poison", autoCreateQueues, autoCreateQueuesIdentity));
             return portConfig;
         }
 
@@ -25,12 +25,13 @@ namespace NServiceBus.Bridge
             InterceptMethod = interceptMethod ?? throw new ArgumentNullException(nameof(interceptMethod));
         }
 
+        public RuntimeTypeGenerator TypeGenerator { get; } = new RuntimeTypeGenerator();
+
         public Dictionary<string, string> PortTable { get; } = new Dictionary<string, string>();
 
         internal InterceptMessageForwarding InterceptMethod = (queue, message, forward) => forward();
         bool? autoCreateQueues;
         string autoCreateQueuesIdentity;
-        RuntimeTypeGenerator typeGenerator = new RuntimeTypeGenerator();
         internal List<Func<IPort>> PortFactories = new List<Func<IPort>>();
     }
 }

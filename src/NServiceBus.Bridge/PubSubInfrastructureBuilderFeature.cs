@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Features;
@@ -17,17 +16,8 @@ class PubSubInfrastructureBuilderFeature : Feature
         }
         else
         {
-            CreateSubscriptionManager(transportInfra);
-            context.RegisterStartupTask(b => new NativePubSubInfrastructureBuilder(b.Build<PubSubInfrastructure>(), CreateSubscriptionManager(transportInfra)));
+            throw new NotSupportedException("This feature should only be active when transport does not support native publish subscribe.");
         }
-    }
-
-    static IManageSubscriptions CreateSubscriptionManager(TransportInfrastructure transportInfra)
-    {
-        var subscriptionInfra = transportInfra.ConfigureSubscriptionInfrastructure();
-        var factoryProperty = typeof(TransportSubscriptionInfrastructure).GetProperty("SubscriptionManagerFactory", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        var factoryInstance = (Func<IManageSubscriptions>) factoryProperty.GetValue(subscriptionInfra, new object[0]);
-        return factoryInstance();
     }
 
     class MessageDrivenPubSubInfrastructureBuilder : FeatureStartupTask
@@ -46,32 +36,6 @@ class PubSubInfrastructureBuilderFeature : Feature
             var forwarder = new MessageDrivenSubscriptionForwarder(pubSubInfrastructure.EndpointInstances);
             var publishRouter = new MessageDrivenPublishRouter(subscriptionStorage, pubSubInfrastructure.DistributionPolicy);
             pubSubInfrastructure.Set(publishRouter, forwarder, subscriptionStorage);
-            return Task.CompletedTask;
-        }
-
-        protected override Task OnStop(IMessageSession session)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    class NativePubSubInfrastructureBuilder : FeatureStartupTask
-    {
-        PubSubInfrastructure pubSubInfrastructure;
-        IManageSubscriptions subscriptionManager;
-
-        public NativePubSubInfrastructureBuilder(PubSubInfrastructure pubSubInfrastructure, IManageSubscriptions subscriptionManager)
-        {
-            this.pubSubInfrastructure = pubSubInfrastructure;
-            this.subscriptionManager = subscriptionManager;
-        }
-
-        protected override Task OnStart(IMessageSession session)
-        {
-            var typeGenerator = new RuntimeTypeGenerator();
-            var forwarder = new NativeSubscriptionForwarder(subscriptionManager, typeGenerator);
-            var publishRouter = new NativePublishRouter(typeGenerator);
-            pubSubInfrastructure.Set(publishRouter, forwarder, new NativeSubscriptionStorage());
             return Task.CompletedTask;
         }
 

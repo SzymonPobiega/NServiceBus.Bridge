@@ -53,6 +53,8 @@
             this.maximumConcurrency = maximumConcurrency;
         }
 
+        public RuntimeTypeGenerator TypeGenerator { get; } = new RuntimeTypeGenerator();
+
         public DistributionPolicy DistributionPolicy { get; } = new DistributionPolicy();
 
         public EndpointInstances EndpointInstances { get; } = new EndpointInstances();
@@ -61,7 +63,7 @@
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
                 EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
-                leftCustomization, rightCustomization, maximumConcurrency, interceptMethod);
+                leftCustomization, rightCustomization, maximumConcurrency, interceptMethod, TypeGenerator);
         }
     }
 }

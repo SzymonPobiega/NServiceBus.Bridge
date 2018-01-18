@@ -4,14 +4,31 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-class RuntimeTypeGenerator
+public class RuntimeTypeGenerator
 {
-    public Type GetType(string messageType)
+    public void RegisterKnownType(Type knownType)
     {
+        if (knownType == null)
+        {
+            throw new ArgumentNullException(nameof(knownType));
+        }
+        if (knownType.AssemblyQualifiedName == null)
+        {
+            throw new ArgumentException("Name of type is null", nameof(knownType));
+        }
+        knownTypes[knownType.AssemblyQualifiedName] = knownType;
+    }
+
+    internal Type GetType(string messageType)
+    {
+        if (knownTypes.TryGetValue(messageType, out var knownType))
+        {
+            return knownType;
+        }
+
         var parts = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
         var nameAndNamespace = parts[0];
         var assembly = parts[1];
-
 
         ModuleBuilder moduleBuilder;
         lock (assemblies)
@@ -73,5 +90,6 @@ class RuntimeTypeGenerator
 
     Dictionary<string, ModuleBuilder> assemblies = new Dictionary<string, ModuleBuilder>();
     Dictionary<string, Type> types = new Dictionary<string, Type>();
+    Dictionary<string, Type> knownTypes = new Dictionary<string, Type>();
     Dictionary<string, TypeBuilder> typeBuilders = new Dictionary<string, TypeBuilder>();
 }

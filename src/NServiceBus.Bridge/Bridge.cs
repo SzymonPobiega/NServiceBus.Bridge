@@ -12,6 +12,7 @@ class Bridge<TLeft, TRight> : IBridge
     where TLeft : TransportDefinition, new()
     where TRight : TransportDefinition, new()
 {
+    RuntimeTypeGenerator typeGenerator;
     IEndpointInstance leftDispatcher;
     IEndpointInstance rightDispatcher;
 
@@ -28,17 +29,20 @@ class Bridge<TLeft, TRight> : IBridge
     IRouter sendRouter;
     IRouter replyRouter;
 
+    PubSubInfrastructure rightPubSubInfrastructure;
+    PubSubInfrastructure leftPubSubInfrastructure;
+
     public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, EndpointInstances endpointInstances, 
         Action<EndpointConfiguration> subscriptionPersistenceConfig, IDistributionPolicy distributionPolicy, string poisonQueue, 
         Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency,
-        InterceptMessageForwarding interceptForward)
+        InterceptMessageForwarding interceptForward, RuntimeTypeGenerator typeGenerator)
     {
+        this.typeGenerator = typeGenerator;
         sendRouter = new SendRouter(endpointInstances, distributionPolicy);
         replyRouter = new ReplyRouter();
 
-        var typeGenerator = new RuntimeTypeGenerator();
-        var leftPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
-        var rightPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
+        leftPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
+        rightPubSubInfrastructure = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
 
         leftConfig = RawEndpointConfiguration.Create(leftName, (context, _) => interceptForward(leftName, context, () => Forward(context, rightStartable, leftPubSubInfrastructure, rightPubSubInfrastructure)), poisonQueue);
         var leftTransport = leftConfig.UseTransport<TLeft>();
@@ -49,7 +53,10 @@ class Bridge<TLeft, TRight> : IBridge
             leftConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues);
+        if (new TLeft() is IMessageDrivenSubscriptionTransport)
+        {
+            leftDispatcherConfig = CreateDispatcherConfig(leftName, subscriptionPersistenceConfig, poisonQueue, leftCustomization, leftPubSubInfrastructure, autoCreateQueues);
+        }
 
         rightConfig = RawEndpointConfiguration.Create(rightName, (context, _) => interceptForward(rightName, context, () => Forward(context, leftStartable, rightPubSubInfrastructure, leftPubSubInfrastructure)), poisonQueue);
         var rightTransport = rightConfig.UseTransport<TRight>();
@@ -60,7 +67,10 @@ class Bridge<TLeft, TRight> : IBridge
             rightConfig.AutoCreateQueue(autoCreateQueuesIdentity);
         }
 
-        rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure, autoCreateQueues);
+        if (new TRight() is IMessageDrivenSubscriptionTransport)
+        {
+            rightDispatcherConfig = CreateDispatcherConfig(rightName, subscriptionPersistenceConfig, poisonQueue, rightCustomization, rightPubSubInfrastructure, autoCreateQueues);
+        }
 
         if (maximumConcurrency.HasValue)
         {
@@ -69,7 +79,9 @@ class Bridge<TLeft, TRight> : IBridge
         }
     }
 
-    static EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues)
+    
+
+    EndpointConfiguration CreateDispatcherConfig<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure, bool autoCreateQueues)
         where TTransport : TransportDefinition, new()
     {
         var dispatcherConfig = new EndpointConfiguration(name);
@@ -128,13 +140,34 @@ class Bridge<TLeft, TRight> : IBridge
 
     public async Task Start()
     {
-        leftDispatcher = await Endpoint.Start(leftDispatcherConfig).ConfigureAwait(false);
-        rightDispatcher = await Endpoint.Start(rightDispatcherConfig).ConfigureAwait(false);
-
         //At this stage the pubsub infrastructure is set up.
 
         leftStartable = await RawEndpoint.Create(leftConfig).ConfigureAwait(false);
         rightStartable = await RawEndpoint.Create(rightConfig).ConfigureAwait(false);
+
+        if (rightDispatcherConfig != null)
+        {
+            rightDispatcher = await Endpoint.Start(rightDispatcherConfig).ConfigureAwait(false);
+        }
+        else
+        {
+            var subscriptionManager = SubscriptionManagerHelper.CreateSubscriptionManager(rightStartable.Settings.Get<TransportInfrastructure>());
+            var forwarder = new NativeSubscriptionForwarder(subscriptionManager, typeGenerator);
+            var publishRouter = new NativePublishRouter(typeGenerator);
+            rightPubSubInfrastructure.Set(publishRouter, forwarder, new NativeSubscriptionStorage());
+        }
+
+        if (leftDispatcherConfig != null)
+        {
+            leftDispatcher = await Endpoint.Start(leftDispatcherConfig).ConfigureAwait(false);
+        }
+        else
+        {
+            var subscriptionManager = SubscriptionManagerHelper.CreateSubscriptionManager(leftStartable.Settings.Get<TransportInfrastructure>());
+            var forwarder = new NativeSubscriptionForwarder(subscriptionManager, typeGenerator);
+            var publishRouter = new NativePublishRouter(typeGenerator);
+            leftPubSubInfrastructure.Set(publishRouter, forwarder, new NativeSubscriptionStorage());
+        }
 
         leftEndpoint = await leftStartable.Start().ConfigureAwait(false);
         rightEndpoint = await rightStartable.Start().ConfigureAwait(false);
