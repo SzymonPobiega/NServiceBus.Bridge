@@ -53,7 +53,7 @@
             this.maximumConcurrency = maximumConcurrency;
         }
 
-        public RuntimeTypeGenerator TypeGenerator { get; } = new RuntimeTypeGenerator();
+        public RuntimeTypeGenerator AzureServiceBusOnEndpointOrientedTopology { get; } = new RuntimeTypeGenerator();
 
         public DistributionPolicy DistributionPolicy { get; } = new DistributionPolicy();
 
@@ -63,7 +63,7 @@
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
                 EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
-                leftCustomization, rightCustomization, maximumConcurrency, interceptMethod, TypeGenerator);
+                leftCustomization, rightCustomization, maximumConcurrency, interceptMethod, AzureServiceBusOnEndpointOrientedTopology);
         }
     }
 }

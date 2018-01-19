@@ -6,7 +6,7 @@ using System.Reflection.Emit;
 
 public class RuntimeTypeGenerator
 {
-    public void RegisterKnownType(Type knownType)
+    public void PublishesEvent(Type knownType)
     {
         if (knownType == null)
         {
