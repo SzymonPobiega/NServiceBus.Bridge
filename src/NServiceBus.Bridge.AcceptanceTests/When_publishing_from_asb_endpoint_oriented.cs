@@ -27,7 +27,7 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
 
         }).And<MsmqTransport>("Right");
 
-        bridgeConfiguration.TypeGenerator.RegisterKnownType(typeof(MyAsbEvent));
+        bridgeConfiguration.AzureServiceBusOnEndpointOrientedTopology.PublishesEvent(typeof(MyAsbEvent));
         bridgeConfiguration.InterceptForawrding(async (queue, message, dispatch) =>
         {
             using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
