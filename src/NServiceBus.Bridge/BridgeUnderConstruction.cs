@@ -5,10 +5,10 @@ namespace NServiceBus.Bridge
 {
     public static class Bridge
     {
-        public static BridgeUnderConstruction<TLeft> Between<TLeft>(string endpointName, Action<TransportExtensions<TLeft>> customization = null)
+        public static BridgeUnderConstruction<TLeft> Between<TLeft>(string endpointBridgeEndName, Action<TransportExtensions<TLeft>> customization = null)
             where TLeft : TransportDefinition, new()
         {
-            return new BridgeUnderConstruction<TLeft>(endpointName, customization);
+            return new BridgeUnderConstruction<TLeft>(endpointBridgeEndName, customization);
         }
     }
 
@@ -24,11 +24,11 @@ namespace NServiceBus.Bridge
             this.leftCustomization = leftCustomization;
         }
 
-        public BridgeConfiguration<TLeft, TRight> And<TRight>(string endpointName,
+        public BridgeConfiguration<TLeft, TRight> And<TRight>(string endpointBridgeEndName,
             Action<TransportExtensions<TRight>> customization = null)
             where TRight : TransportDefinition, new()
         {
-            return new BridgeConfiguration<TLeft, TRight>(leftName, endpointName, leftCustomization, customization);
+            return new BridgeConfiguration<TLeft, TRight>(leftName, endpointBridgeEndName, leftCustomization, customization);
         }
     }
 }
