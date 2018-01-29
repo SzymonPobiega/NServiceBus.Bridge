@@ -21,7 +21,7 @@ class Port<T> : IPort
 
         rawConfig = new ThrottlingRawEndpointConfig<T>(name, poisonQueue, ext =>
             {
-                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
+                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue, name);
                 transportCustomization?.Invoke(ext);
             },
             async (context, _) =>
@@ -38,10 +38,11 @@ class Port<T> : IPort
             immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
     }
 
-    static void SetTransportSpecificFlags(SettingsHolder settings, string poisonQueue)
+    static void SetTransportSpecificFlags(SettingsHolder settings, string poisonQueue, string localAddress)
     {
         settings.Set("errorQueue", poisonQueue);
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
+        settings.RegisterReceivingComponent(localAddress);
     }
 
     public Task Forward(string source, MessageContext context)

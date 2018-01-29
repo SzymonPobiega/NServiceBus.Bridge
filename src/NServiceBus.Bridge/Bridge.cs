@@ -75,7 +75,7 @@ class Bridge<TLeft, TRight> : IBridge
     {
         settings.Set("errorQueue", poisonQueue);
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
-        settings.Set("NServiceBus.Bridge.LocalAddress", localAddress);
+        settings.RegisterReceivingComponent(localAddress);
     }
 
     Task Forward(MessageContext context, IRawEndpoint dispatcher, SubscriptionReceiver subscriptionReceiver, SubscriptionForwarder subscriptionForwarder, IRouter outboundPublishRouter, InterBridgeRoutingSettings forwarding)
