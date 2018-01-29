@@ -13,7 +13,7 @@ using NServiceBus.Unicast.Transport;
 
 
 
-class MessageDrivenSubscriptionForwarder : ISubscriptionForwarder
+class MessageDrivenSubscriptionForwarder : SubscriptionForwarder
 {
     static ILog Logger = LogManager.GetLogger<MessageDrivenSubscriptionForwarder>();
 
@@ -24,20 +24,23 @@ class MessageDrivenSubscriptionForwarder : ISubscriptionForwarder
         this.endpointInstances = endpointInstances;
     }
 
-    public bool RequiresPublisherEndpoint => true;
-
-    public Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         return Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher, forwarding);
     }
 
-    public Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         return Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Unsubscribe, dispatcher, forwarding);
     }
 
     async Task Send(Subscriber subscriber, string publisherEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
+        if (publisherEndpoint == null)
+        {
+            throw new UnforwardableMessageException("Subscription message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
+        }
+
         var subscriptionMessage = ControlMessageFactory.Create(intent);
 
         subscriptionMessage.Headers[Headers.SubscriptionMessageType] = messageType;

@@ -18,9 +18,9 @@ public class When_replying_to_a_message_via_switch : NServiceBusAcceptanceTest
             .WithComponent(new SwitchComponent(() =>
             {
                 var cfg = new SwitchConfiguration();
-                cfg.AddPort<MsmqTransport>("Port1", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
-                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
-                cfg.AddPort<MsmqTransport>("Port3", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
+                cfg.AddPort<MsmqTransport>("Port1", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<MsmqTransport>("Port3", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
 
                 cfg.PortTable[Conventions.EndpointNamingConvention(typeof(Sender1))] = "Port1";
                 cfg.PortTable[Conventions.EndpointNamingConvention(typeof(Sender2))] = "Port2";

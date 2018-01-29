@@ -107,9 +107,9 @@
         /// </summary>
         public IBridge Create()
         {
+            var routing = new RoutingConfiguration(new RuntimeTypeGenerator(), EndpointInstances, subscriptionStorage, DistributionPolicy);
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                EndpointInstances, subscriptionStorage, DistributionPolicy, "poison",
-                leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
+                routing, "poison", leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
                 ImmediateRetries, DelayedRetries, CircuitBreakerThreshold);
         }
     }

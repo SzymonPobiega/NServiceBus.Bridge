@@ -1,16 +1,13 @@
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
-using NServiceBus.Extensibility;
-using NServiceBus.Raw;
 using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
-
-class SubscribeRouter
+abstract class SubscriptionReceiver
 {
-    public static async Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher, ISubscriptionForwarder forwarder, ISubscriptionStorage subscriptionStorage, InterBridgeRoutingSettings forwarding)
+    public Task Receive(MessageContext context, MessageIntentEnum intent)
     {
         var messageTypeString = GetSubscriptionMessageTypeFrom(context);
 
@@ -26,12 +23,6 @@ class SubscribeRouter
 
         string subscriberAddress;
         string subscriberEndpoint = null;
-        string publisherEndpoint;
-
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out publisherEndpoint) && forwarder.RequiresPublisherEndpoint)
-        {
-            throw new UnforwardableMessageException("Subscription message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
-        }
 
         if (context.Headers.TryGetValue(Headers.SubscriberTransportAddress, out subscriberAddress))
         {
@@ -49,26 +40,25 @@ class SubscribeRouter
 
         var subscriber = new Subscriber(subscriberAddress, subscriberEndpoint);
         var messageType = new MessageType(messageTypeString);
+
         if (intent == MessageIntentEnum.Subscribe)
         {
-            await subscriptionStorage.Subscribe(subscriber, messageType, new ContextBag()).ConfigureAwait(false);
-            await forwarder.ForwardSubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
+            return ReceiveSubscribe(subscriber, messageType);
         }
-        else
-        {
-            await subscriptionStorage.Unsubscribe(subscriber, messageType, new ContextBag()).ConfigureAwait(false);
-            await forwarder.ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
-        }
-    }
-    
-    static string GetSubscriptionMessageTypeFrom(MessageContext msg)
-    {
-        msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out var value);
-        return value;
+        return ReceiveUnsubscribe(subscriber, messageType);
     }
 
     static string GetReplyToAddress(MessageContext message)
     {
         return message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress) ? replyToAddress : null;
     }
+
+    static string GetSubscriptionMessageTypeFrom(MessageContext msg)
+    {
+        msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out var value);
+        return value;
+    }
+
+    protected abstract Task ReceiveSubscribe(Subscriber subscriber, MessageType messageType);
+    protected abstract Task ReceiveUnsubscribe(Subscriber subscriber, MessageType messageType);
 }

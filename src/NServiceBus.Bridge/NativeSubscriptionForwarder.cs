@@ -11,7 +11,7 @@ using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 using NServiceBus.Unicast.Transport;
 
-class NativeSubscriptionForwarder : ISubscriptionForwarder
+class NativeSubscriptionForwarder : SubscriptionForwarder
 {
     static ILog Logger = LogManager.GetLogger<NativeSubscriptionForwarder>();
 
@@ -26,16 +26,14 @@ class NativeSubscriptionForwarder : ISubscriptionForwarder
         this.endpointInstances = endpointInstances;
     }
 
-    public bool RequiresPublisherEndpoint => false;
-
-    public async Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override async Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         var type = typeGenerator.GetType(messageType);
         await subscriptionManager.Subscribe(type, new ContextBag()).ConfigureAwait(false);
         await Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher, forwarding).ConfigureAwait(false);
     }
 
-    public async Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override async Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         var type = typeGenerator.GetType(messageType);
         await subscriptionManager.Unsubscribe(type, new ContextBag()).ConfigureAwait(false);

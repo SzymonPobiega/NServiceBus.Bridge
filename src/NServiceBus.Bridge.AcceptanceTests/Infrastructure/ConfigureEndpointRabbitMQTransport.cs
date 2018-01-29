@@ -14,7 +14,6 @@ static class ConfigureEndpointRabbitMQTransport
         var connectionStringBuilder = new DbConnectionStringBuilder { ConnectionString = connectionString };
 
         transport.ConnectionString(connectionStringBuilder.ConnectionString);
-        transport.DelayedDelivery().DisableTimeoutManager();
         transport.UseConventionalRoutingTopology();
 
         return transport;

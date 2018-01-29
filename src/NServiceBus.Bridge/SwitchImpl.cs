@@ -16,11 +16,11 @@ class SwitchImpl : ISwitch
 
     public async Task Start()
     {
-        await Task.WhenAll(ports.Values.Select(p => p.Initialize((ctx, infra) => Forward(p.Name, ctx, infra)))).ConfigureAwait(false);
+        await Task.WhenAll(ports.Values.Select(p => p.Initialize(ctx => Forward(p.Name, ctx)))).ConfigureAwait(false);
         await Task.WhenAll(ports.Values.Select(p => p.StartReceiving())).ConfigureAwait(false);
     }
 
-    Task Forward(string incomingPort, MessageContext msg, PubSubInfrastructure inboundPubSubInfrastructure)
+    Task Forward(string incomingPort, MessageContext msg)
     {
         var intent = GetMesssageIntent(msg);
         string destinationPortName;
@@ -35,16 +35,16 @@ class SwitchImpl : ISwitch
                 {
                     throw new UnforwardableMessageException($"Port '{destinationPortName}' is not configured");
                 }
-                return destinationPort.Forward(incomingPort, msg, inboundPubSubInfrastructure);
+                return destinationPort.Forward(incomingPort, msg);
             case MessageIntentEnum.Publish:
-                return Task.WhenAll(ports.Values.Where(p => p.Name != incomingPort).Select(x => x.Forward(incomingPort, msg, inboundPubSubInfrastructure)));
+                return Task.WhenAll(ports.Values.Where(p => p.Name != incomingPort).Select(x => x.Forward(incomingPort, msg)));
             case MessageIntentEnum.Reply:
                 destinationPortName = ResolveReplyDestinationPort(msg);
                 if (!ports.TryGetValue(destinationPortName, out destinationPort))
                 {
                     throw new UnforwardableMessageException($"Port '{destinationPortName}' is not configured");
                 }
-                return destinationPort.Forward(incomingPort, msg, inboundPubSubInfrastructure);
+                return destinationPort.Forward(incomingPort, msg);
             default:
                 throw new UnforwardableMessageException("Unroutable message intent: " + intent);
         }

@@ -14,17 +14,27 @@
         /// </summary>
         public class MsSqlServer : SqlDialect
         {
+            string schema;
+
             /// <summary>
             /// Microsoft SQL Server
             /// </summary>
             public MsSqlServer()
+                : this("dbo")
             {
-                Schema = "dbo";
+            }
+
+            /// <summary>
+            /// Microsoft SQL Server
+            /// </summary>
+            public MsSqlServer(string schema)
+            {
+                this.schema = schema;
             }
 
             internal override void AddCreationScriptParameters(DbCommand command)
             {
-                command.AddParameter("schema", Schema);
+                command.AddParameter("schema", schema);
             }
 
             internal override void SetParameterValue(DbParameter parameter, object value)
@@ -49,11 +59,10 @@
                 return new CommandWrapper(command, this);
             }
 
-            internal string Schema { get; set; }
 
             internal override string GetSubscriptionTableName(string tablePrefix)
             {
-                return $"[{Schema}].[{tablePrefix}SubscriptionData]";
+                return $"[{schema}].[{tablePrefix}SubscriptionData]";
             }
 
             internal override string GetSubscriptionSubscribeCommand(string tableName)

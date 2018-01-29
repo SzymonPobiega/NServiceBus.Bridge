@@ -7,6 +7,26 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="SubscriptionStorage\Scripts\Create_MsSqlServer.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Create_MySql.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Create_Oracle.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Create_PostgreSql.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_MsSqlServer.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_MySql.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_Oracle.sql" />
+    <None Remove="SubscriptionStorage\Scripts\Drop_PostgreSql.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_MsSqlServer.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_MySql.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_Oracle.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Create_PostgreSql.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_MsSqlServer.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_MySql.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_Oracle.sql" />
+    <EmbeddedResource Include="SubscriptionStorage\Scripts\Drop_PostgreSql.sql" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="4.0.0-*" PrivateAssets="All" />
     <PackageReference Include="NServiceBus" Version="[7.0.0-Beta0012, 8.0.0)" />
     <PackageReference Include="NServiceBus.Raw" Version="[3.0.0-Beta0003, 4.0.0)" />

@@ -17,12 +17,23 @@ class SqlSubscriptionStorage : ISubscriptionStorage
     public SqlSubscriptionStorage(Func<DbConnection> connectionBuilder, string tablePrefix, SqlDialect sqlDialect, TimeSpan? cacheFor)
     {
         this.connectionBuilder = connectionBuilder;
+        this.tablePrefix = tablePrefix;
         this.sqlDialect = sqlDialect;
         this.cacheFor = cacheFor;
         subscriptionCommands = SubscriptionCommandBuilder.Build(sqlDialect, tablePrefix);
         if (cacheFor != null)
         {
             Cache = new ConcurrentDictionary<string, CacheItem>();
+        }
+    }
+
+    public async Task Install()
+    {
+        using (var connection = await connectionBuilder.OpenConnection().ConfigureAwait(false))
+        using (var transaction = connection.BeginTransaction())
+        {
+            await sqlDialect.ExecuteTableCommand(connection, transaction, SubscriptionScriptBuilder.BuildCreateScript(sqlDialect), tablePrefix);
+            transaction.Commit();
         }
     }
 
@@ -180,6 +191,7 @@ class SqlSubscriptionStorage : ISubscriptionStorage
 
     public ConcurrentDictionary<string, CacheItem> Cache;
     Func<DbConnection> connectionBuilder;
+    string tablePrefix;
     SqlDialect sqlDialect;
     TimeSpan? cacheFor;
     SubscriptionCommands subscriptionCommands;
