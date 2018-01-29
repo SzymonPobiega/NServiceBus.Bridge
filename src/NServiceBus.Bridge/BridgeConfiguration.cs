@@ -4,6 +4,7 @@
     using Routing;
     using Transport;
     using Persistence;
+    using Unicast.Subscriptions.MessageDrivenSubscriptions;
 
     /// <summary>
     /// Configures the bridge that can forward messages between different transports. A bridge is almost symmetrical in the sense that messages
@@ -20,7 +21,7 @@
         internal string RightName;
         Action<TransportExtensions<TLeft>> leftCustomization;
         Action<TransportExtensions<TRight>> rightCustomization;
-        Action<EndpointConfiguration> subscriptionPersistenceConfig;
+        ISubscriptionStorage subscriptionStorage;
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
@@ -37,16 +38,9 @@
         /// <summary>
         /// Configures the bridge to use specified subscription persistence.
         /// </summary>
-        /// <typeparam name="TPersistence">Type of persistence.</typeparam>
-        /// <param name="subscriptionPersistenceConfiguration">A callback for configuring selected persistence.</param>
-        public void UseSubscriptionPersistence<TPersistence>(Action<EndpointConfiguration, PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
-            where TPersistence : PersistenceDefinition
+        public void UseSubscriptionPersistence(ISubscriptionStorage subscriptionStorage)
         {
-            subscriptionPersistenceConfig = e =>
-            {
-                var persistence = e.UsePersistence<TPersistence>();
-                subscriptionPersistenceConfiguration(e, persistence);
-            };
+            this.subscriptionStorage = subscriptionStorage;
         }
 
         /// <summary>
@@ -114,7 +108,7 @@
         public IBridge Create()
         {
             return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
+                EndpointInstances, subscriptionStorage, DistributionPolicy, "poison",
                 leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
                 ImmediateRetries, DelayedRetries, CircuitBreakerThreshold);
         }
