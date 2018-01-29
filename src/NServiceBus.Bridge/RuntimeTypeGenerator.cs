@@ -21,7 +21,13 @@ public class RuntimeTypeGenerator
 
     internal Type GetType(string messageType)
     {
-        if (knownTypes.TryGetValue(messageType, out var knownType))
+        var knownType = Type.GetType(messageType, false);
+        if (knownType != null)
+        {
+            return knownType;
+        }
+
+        if (knownTypes.TryGetValue(messageType, out knownType))
         {
             return knownType;
         }
