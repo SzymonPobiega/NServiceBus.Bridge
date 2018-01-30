@@ -1,20 +1,9 @@
 namespace NServiceBus.Bridge
 {
-    using System.Threading.Tasks;
-
     /// <summary>
     /// An instance of a switch.
     /// </summary>
-    public interface ISwitch
+    public interface ISwitch : IBridge
     {
-        /// <summary>
-        /// Starts the switch.
-        /// </summary>
-        Task Start();
-
-        /// <summary>
-        /// Stops the switch.
-        /// </summary>
-        Task Stop();
     }
 }

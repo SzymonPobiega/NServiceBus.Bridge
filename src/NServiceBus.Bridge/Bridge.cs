@@ -29,11 +29,11 @@ class Bridge<TLeft, TRight> : IBridge
     SubscriptionForwarder leftSubscriptionForwarder;
     SubscriptionForwarder rightSubscriptionForwarder;
 
-    IRouter leftPublishRouter;
-    IRouter rightPublishRouter;
+    IPublishRouter leftPublishRouter;
+    IPublishRouter rightPublishRouter;
 
     SendRouter sendRouter;
-    IRouter replyRouter;
+    ReplyRouter replyRouter;
 
     public Bridge(string leftName, string rightName, bool autoCreateQueues, string autoCreateQueuesIdentity, RoutingConfiguration routingConfiguration, string poisonQueue, Action<TransportExtensions<TLeft>> leftCustomization, Action<TransportExtensions<TRight>> rightCustomization, int? maximumConcurrency, InterceptMessageForwarding interceptForward, InterBridgeRoutingSettings forwarding, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
     {
@@ -78,7 +78,7 @@ class Bridge<TLeft, TRight> : IBridge
         settings.RegisterReceivingComponent(localAddress);
     }
 
-    Task Forward(MessageContext context, IRawEndpoint dispatcher, SubscriptionReceiver subscriptionReceiver, SubscriptionForwarder subscriptionForwarder, IRouter outboundPublishRouter, InterBridgeRoutingSettings forwarding)
+    Task Forward(MessageContext context, IRawEndpoint dispatcher, SubscriptionReceiver subscriptionReceiver, SubscriptionForwarder subscriptionForwarder, IPublishRouter outboundPublishRouter, InterBridgeRoutingSettings forwarding)
     {
         var intent = GetMesssageIntent(context);
 
@@ -88,9 +88,9 @@ class Bridge<TLeft, TRight> : IBridge
             case MessageIntentEnum.Unsubscribe:
                 return ForwardSubscribe(context, intent, dispatcher, subscriptionReceiver, subscriptionForwarder, forwarding);
             case MessageIntentEnum.Send:
-                return sendRouter.Route(context, dispatcher, forwarding);
+                return sendRouter.Route(context, dispatcher, forwarding, null);
             case MessageIntentEnum.Publish:
-                return outboundPublishRouter.Route(context, intent, dispatcher);
+                return outboundPublishRouter.Route(context, dispatcher);
             case MessageIntentEnum.Reply:
                 return replyRouter.Route(context, intent, dispatcher);
             default:

@@ -19,7 +19,7 @@ class RoutingConfiguration
         this.distributionPolicy = distributionPolicy;
     }
 
-    public void PreparePubSub(TransportInfrastructure transport, out IRouter publishRouter, out SubscriptionReceiver subscriptionReceiver, out SubscriptionForwarder subscriptionForwarder)
+    public void PreparePubSub(TransportInfrastructure transport, out IPublishRouter publishRouter, out SubscriptionReceiver subscriptionReceiver, out SubscriptionForwarder subscriptionForwarder)
     {
         if (transport.OutboundRoutingPolicy.Publishes == OutboundRoutingType.Multicast)
         {
@@ -39,8 +39,8 @@ class RoutingConfiguration
         }
     }
 
-    public SendRouter PrepareSending(string localPortName = null)
+    public SendRouter PrepareSending()
     {
-        return new SendRouter(endpointInstances, distributionPolicy, localPortName);
+        return new SendRouter(endpointInstances, distributionPolicy);
     }
 }

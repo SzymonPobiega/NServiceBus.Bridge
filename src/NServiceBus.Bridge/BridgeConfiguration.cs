@@ -3,7 +3,6 @@
     using System;
     using Routing;
     using Transport;
-    using Persistence;
     using Unicast.Subscriptions.MessageDrivenSubscriptions;
 
     /// <summary>
@@ -17,6 +16,8 @@
         where TLeft : TransportDefinition, new()
         where TRight : TransportDefinition, new()
     {
+        static InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
+
         internal string LeftName;
         internal string RightName;
         Action<TransportExtensions<TLeft>> leftCustomization;
@@ -107,10 +108,33 @@
         /// </summary>
         public IBridge Create()
         {
+            //var routing = new RoutingConfiguration(new RuntimeTypeGenerator(), EndpointInstances, subscriptionStorage, DistributionPolicy);
+            //return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
+            //    routing, "poison", leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
+            //    ImmediateRetries, DelayedRetries, CircuitBreakerThreshold);
+
             var routing = new RoutingConfiguration(new RuntimeTypeGenerator(), EndpointInstances, subscriptionStorage, DistributionPolicy);
-            return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                routing, "poison", leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
-                ImmediateRetries, DelayedRetries, CircuitBreakerThreshold);
+
+            var leftPort = new Port<TLeft>(LeftName, leftCustomization, routing, "poison", maximumConcurrency, interceptForwarding, autoCreateQueues, 
+                autoCreateQueuesIdentity, ImmediateRetries, DelayedRetries, CircuitBreakerThreshold, nullForwarding);
+
+            var rightPort = new Port<TRight>(RightName, rightCustomization, routing, "poison", maximumConcurrency, interceptForwarding, autoCreateQueues,
+                autoCreateQueuesIdentity, ImmediateRetries, DelayedRetries, CircuitBreakerThreshold, Forwarding);
+
+            var @switch = new SwitchImpl(new IPort[]{leftPort, rightPort}, (incomingPort, context) =>
+            {
+                if (incomingPort == LeftName)
+                {
+                    return RightName;
+                }
+                if (incomingPort == RightName)
+                {
+                    return LeftName;
+                }
+                throw new Exception("Invalid incoming port.");
+            });
+
+            return @switch;
         }
     }
 }

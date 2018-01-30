@@ -8,9 +8,9 @@ using NServiceBus.Transport;
 
 class SwitchImpl : ISwitch
 {
-    public SwitchImpl(IPort[] ports, Dictionary<string, string> routeTable)
+    public SwitchImpl(IPort[] ports, Func<string, MessageContext, string> resolveDestinationPort)
     {
-        this.routeTable = routeTable;
+        this.resolveDestinationPort = resolveDestinationPort;
         this.ports = ports.ToDictionary(x => x.Name, x => x);
     }
 
@@ -30,7 +30,7 @@ class SwitchImpl : ISwitch
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
             case MessageIntentEnum.Send:
-                destinationPortName = ResolveDestinationPort(msg);
+                destinationPortName = resolveDestinationPort(incomingPort, msg);
                 if (!ports.TryGetValue(destinationPortName, out destinationPort))
                 {
                     throw new UnforwardableMessageException($"Port '{destinationPortName}' is not configured");
@@ -88,24 +88,8 @@ class SwitchImpl : ISwitch
         return destinationPort;
     }
 
-    string ResolveDestinationPort(MessageContext context)
-    {
-        if (context.Headers.TryGetValue("NServiceBus.Bridge.DestinationPort", out var destinationPort))
-        {
-            return destinationPort;
-        }
-        string destinationEndpoint;
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out destinationEndpoint))
-        {
-            throw new UnforwardableMessageException("The message does not contain neither 'NServiceBus.Bridge.DestinationPort' header nor 'NServiceBus.Bridge.DestinationEndpoint' header.");
-        }
-        if (!routeTable.TryGetValue(destinationEndpoint, out destinationPort))
-        {
-            throw new UnforwardableMessageException($"The message does not contain 'NServiceBus.Bridge.DestinationPort' header and routing configuration does not have entry for endpoint '{destinationEndpoint}'.");
-        }
-        return destinationPort;
-    }
+    
 
     Dictionary<string, IPort> ports;
-    Dictionary<string, string> routeTable;
+    Func<string, MessageContext, string> resolveDestinationPort;
 }

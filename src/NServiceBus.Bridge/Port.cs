@@ -11,12 +11,13 @@ class Port<T> : IPort
     where T : TransportDefinition, new()
 {
     public string Name { get; }
-    public Port(string name, Action<TransportExtensions<T>> transportCustomization, RoutingConfiguration routingConfiguration, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
+    public Port(string name, Action<TransportExtensions<T>> transportCustomization, RoutingConfiguration routingConfiguration, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity, int immediateRetries, int delayedRetries, int circuitBreakerThreshold, InterBridgeRoutingSettings forwarding)
     {
         this.routingConfiguration = routingConfiguration;
         this.interceptMethod = interceptMethod;
+        this.forwarding = forwarding;
         Name = name;
-        sendRouter = routingConfiguration.PrepareSending(Name);
+        sendRouter = routingConfiguration.PrepareSending();
         replyRouter = new ReplyRouter();
 
         rawConfig = new ThrottlingRawEndpointConfig<T>(name, poisonQueue, ext =>
@@ -48,10 +49,10 @@ class Port<T> : IPort
     public Task Forward(string source, MessageContext context)
     {
         return interceptMethod(source, context, sender.Dispatch, 
-            dispatch => Forward(context, new InterceptingDispatcher(sender, dispatch)));
+            dispatch => Forward(source, context, new InterceptingDispatcher(sender, dispatch)));
     }
 
-    Task Forward(MessageContext context, IRawEndpoint dispatcher)
+    Task Forward(string source, MessageContext context, IRawEndpoint dispatcher)
     {
         var intent = GetMesssageIntent(context);
 
@@ -59,11 +60,11 @@ class Port<T> : IPort
         {
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
-                return subscriptionForwarder.Forward(context, intent, dispatcher, nullForwarding);
+                return subscriptionForwarder.Forward(context, intent, dispatcher, forwarding);
             case MessageIntentEnum.Publish:
-                return publishRouter.Route(context, intent, dispatcher);
+                return publishRouter.Route(context, dispatcher);
             case MessageIntentEnum.Send:
-                return sendRouter.Route(context, dispatcher, nullForwarding);
+                return sendRouter.Route(context, dispatcher, forwarding, source);
             case MessageIntentEnum.Reply:
                 return replyRouter.Route(context, intent, dispatcher);
             default:
@@ -116,6 +117,7 @@ class Port<T> : IPort
 
     RoutingConfiguration routingConfiguration;
     InterceptMessageForwarding interceptMethod;
+    InterBridgeRoutingSettings forwarding;
     Func<MessageContext, Task> onMessage;
     IReceivingRawEndpoint receiver;
     IStartableRawEndpoint sender;
@@ -123,10 +125,9 @@ class Port<T> : IPort
 
     SubscriptionReceiver subscriptionReceiver;
     SubscriptionForwarder subscriptionForwarder;
-    IRouter publishRouter;
+    IPublishRouter publishRouter;
 
     ThrottlingRawEndpointConfig<T> rawConfig;
     SendRouter sendRouter;
     ReplyRouter replyRouter;
-    InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
 }

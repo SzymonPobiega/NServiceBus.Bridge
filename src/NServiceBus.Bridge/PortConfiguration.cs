@@ -12,6 +12,8 @@
     public class PortConfiguration<T>
         where T : TransportDefinition, new()
     {
+        static InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
+
         string Name;
         Action<TransportExtensions<T>> customization;
         bool? autoCreateQueues;
@@ -66,7 +68,7 @@
         {
             var routing = new RoutingConfiguration(typeGenerator, EndpointInstances, subscriptionStorage, DistributionPolicy);
             return new Port<T>(Name, customization, routing, poisonQueue, maximumConcurrency, interceptMethod,
-                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity, immediateRetries, delayedRetries, circuitBreakerThreshold);
+                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity, immediateRetries, delayedRetries, circuitBreakerThreshold, nullForwarding);
         }
     }
 }

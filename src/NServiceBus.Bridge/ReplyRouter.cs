@@ -6,7 +6,7 @@ using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
-class ReplyRouter : IRouter
+class ReplyRouter
 {
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
     {
