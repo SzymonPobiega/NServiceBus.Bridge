@@ -6,7 +6,7 @@ using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Transport;
 
-class SwitchImpl : ISwitch
+class SwitchImpl : IBridge
 {
     public SwitchImpl(IPort[] ports, Func<string, MessageContext, string> resolveDestinationPort)
     {

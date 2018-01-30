@@ -13,7 +13,7 @@ namespace NServiceBus.Bridge
         /// Creates a new instance of a switch based on the provided configuration.
         /// </summary>
         /// <param name="config">Switch configuration.</param>
-        public static ISwitch Create(SwitchConfiguration config)
+        public static IBridge Create(SwitchConfiguration config)
         {
             var ports = config.PortFactories.Select(x => x()).ToArray();
             return new SwitchImpl(ports, (incomingPort, context) => ResolveDestinationPort(config.PortTable, context));

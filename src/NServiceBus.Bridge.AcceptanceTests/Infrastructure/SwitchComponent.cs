@@ -41,9 +41,9 @@ class SwitchComponent : IComponentBehavior
 
     class Runner : ComponentRunner
     {
-        ISwitch @switch;
+        IBridge @switch;
 
-        public Runner(ISwitch @switch, string name)
+        public Runner(IBridge @switch, string name)
         {
             this.@switch = @switch;
             this.Name = name;
