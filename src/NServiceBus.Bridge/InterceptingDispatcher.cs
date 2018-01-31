@@ -29,4 +29,5 @@ class InterceptingDispatcher : IRawEndpoint
     public string EndpointName => impl.EndpointName;
 
     public ReadOnlySettings Settings => impl.Settings;
+    public IManageSubscriptions SubscriptionManager => impl.SubscriptionManager;
 }

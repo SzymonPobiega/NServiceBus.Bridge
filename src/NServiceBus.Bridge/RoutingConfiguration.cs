@@ -1,5 +1,6 @@
 ﻿using System;
 using NServiceBus.Bridge;
+using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
@@ -19,13 +20,14 @@ class RoutingConfiguration
         this.distributionPolicy = distributionPolicy;
     }
 
-    public void PreparePubSub(TransportInfrastructure transport, out IPublishRouter publishRouter, out SubscriptionReceiver subscriptionReceiver, out SubscriptionForwarder subscriptionForwarder)
+    public void PreparePubSub(IRawEndpoint endpoint, out IPublishRouter publishRouter, out SubscriptionReceiver subscriptionReceiver, out SubscriptionForwarder subscriptionForwarder)
     {
+        var transport = endpoint.Settings.Get<TransportInfrastructure>();
         if (transport.OutboundRoutingPolicy.Publishes == OutboundRoutingType.Multicast)
         {
             publishRouter = new NativePublishRouter(typeGenerator);
             subscriptionReceiver = new NullSubscriptionReceiver();
-            subscriptionForwarder = new NativeSubscriptionForwarder(transport.CreateSubscriptionManager(), typeGenerator, endpointInstances);
+            subscriptionForwarder = new NativeSubscriptionForwarder(endpoint.SubscriptionManager, typeGenerator, endpointInstances);
         }
         else
         {

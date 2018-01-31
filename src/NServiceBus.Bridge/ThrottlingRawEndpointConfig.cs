@@ -14,7 +14,9 @@ delegate Task<ErrorHandleResult> PoisonMessageHandling(IErrorHandlingPolicyConte
 class ThrottlingRawEndpointConfig<T> : IStartableRawEndpoint, IReceivingRawEndpoint
     where T : TransportDefinition, new()
 {
-    public ThrottlingRawEndpointConfig(string queue, string poisonMessageQueueName, Action<TransportExtensions<T>> transportCustomization, Func<MessageContext, IDispatchMessages, Task> onMessage, PoisonMessageHandling poisonMessageHandling, int? maximumConcurrency, int immediateRetries, int delayedRetries, int circuitBreakerThreshold, bool autoCreateQueue, string autoCreateQueueIdentity = null)
+    public ThrottlingRawEndpointConfig(string queue, string poisonMessageQueueName, Action<TransportExtensions<T>> transportCustomization, 
+        Func<MessageContext, IDispatchMessages, Task> onMessage, PoisonMessageHandling poisonMessageHandling, 
+        int? maximumConcurrency, int immediateRetries, int delayedRetries, int circuitBreakerThreshold, bool autoCreateQueue, string autoCreateQueueIdentity = null)
     {
         if (immediateRetries < 0)
         {
@@ -164,6 +166,7 @@ class ThrottlingRawEndpointConfig<T> : IStartableRawEndpoint, IReceivingRawEndpo
     string IRawEndpoint.TransportAddress => startable?.TransportAddress ?? endpoint.TransportAddress;
     string IRawEndpoint.EndpointName => startable?.EndpointName ?? endpoint.EndpointName;
     ReadOnlySettings IRawEndpoint.Settings => startable?.Settings ?? endpoint.Settings;
+    public IManageSubscriptions SubscriptionManager => startable?.SubscriptionManager ?? endpoint.SubscriptionManager;
 
     RawEndpointConfiguration config;
     IReceivingRawEndpoint endpoint;

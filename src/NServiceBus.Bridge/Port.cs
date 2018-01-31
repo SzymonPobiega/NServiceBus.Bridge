@@ -43,7 +43,6 @@ class Port<T> : IPort
     {
         settings.Set("errorQueue", poisonQueue);
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
-        settings.RegisterReceivingComponent(localAddress);
     }
 
     public Task Forward(string source, MessageContext context)
@@ -86,7 +85,7 @@ class Port<T> : IPort
     {
         this.onMessage = onMessage;
         sender = await rawConfig.Create().ConfigureAwait(false);
-        routingConfiguration.PreparePubSub(sender.Settings.Get<TransportInfrastructure>(), out publishRouter, out subscriptionReceiver, out subscriptionForwarder);
+        routingConfiguration.PreparePubSub(sender, out publishRouter, out subscriptionReceiver, out subscriptionForwarder);
     }
 
     public async Task StartReceiving()
