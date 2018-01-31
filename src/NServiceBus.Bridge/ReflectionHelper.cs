@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using NServiceBus;
-using NServiceBus.Raw;
 using NServiceBus.Settings;
 using NServiceBus.Transport;
 
