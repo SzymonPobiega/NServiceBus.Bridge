@@ -15,6 +15,6 @@ static class CleanUpHelper
         {
             return ConfigureEndpointRabbitMQTransport.PurgeQueue(summary, queue);
         }
-        throw new Exception("Unsupported transport");
+        return Task.CompletedTask;
     }
 }

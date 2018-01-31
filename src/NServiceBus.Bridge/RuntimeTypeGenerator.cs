@@ -8,10 +8,15 @@ class RuntimeTypeGenerator
 {
     public Type GetType(string messageType)
     {
+        var knownType = Type.GetType(messageType, false);
+        if (knownType != null)
+        {
+            return knownType;
+        }
+
         var parts = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
         var nameAndNamespace = parts[0];
         var assembly = parts[1];
-
 
         ModuleBuilder moduleBuilder;
         lock (assemblies)
