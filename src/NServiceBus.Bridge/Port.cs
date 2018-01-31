@@ -4,7 +4,6 @@ using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Configuration.AdvancedExtensibility;
 using NServiceBus.Raw;
-using NServiceBus.Routing;
 using NServiceBus.Settings;
 using NServiceBus.Transport;
 
@@ -12,62 +11,48 @@ class Port<T> : IPort
     where T : TransportDefinition, new()
 {
     public string Name { get; }
-    public Port(string name, Action<TransportExtensions<T>> transportCustomization, Action<EndpointConfiguration> subscriptionPersistenceConfig, EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, RuntimeTypeGenerator typeGenerator, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
+    public Port(string name, Action<TransportExtensions<T>> transportCustomization, RoutingConfiguration routingConfiguration, string poisonQueue, int? maximumConcurrency, InterceptMessageForwarding interceptMethod, bool autoCreateQueues, string autoCreateQueuesIdentity, int immediateRetries, int delayedRetries, int circuitBreakerThreshold, InterBridgeRoutingSettings forwarding)
     {
+        this.routingConfiguration = routingConfiguration;
         this.interceptMethod = interceptMethod;
+        this.forwarding = forwarding;
         Name = name;
-        sendRouter = new SendRouter(endpointInstances, distributionPolicy, Name);
+        sendRouter = routingConfiguration.PrepareSending();
         replyRouter = new ReplyRouter();
-        pubSubInfra = new PubSubInfrastructure(endpointInstances, distributionPolicy, typeGenerator);
 
         rawConfig = new ThrottlingRawEndpointConfig<T>(name, poisonQueue, ext =>
             {
-                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue);
+                SetTransportSpecificFlags(ext.GetSettings(), poisonQueue, name);
                 transportCustomization?.Invoke(ext);
             },
-            (context, _) => onMessage(context, pubSubInfra),
+            async (context, _) =>
+            {
+                var intent = GetMesssageIntent(context);
+                if (intent == MessageIntentEnum.Subscribe || intent == MessageIntentEnum.Unsubscribe)
+                {
+                    await subscriptionReceiver.Receive(context, intent);
+                }
+                await onMessage(context);
+            },
             (context, dispatcher) => context.MoveToErrorQueue(poisonQueue),
             maximumConcurrency,
             immediateRetries, delayedRetries, circuitBreakerThreshold, autoCreateQueues, autoCreateQueuesIdentity);
-
-        routerEndpointConfig = CreatePubSubRoutingEndpoint(name, subscriptionPersistenceConfig, poisonQueue, transportCustomization, pubSubInfra);
     }
 
-    static EndpointConfiguration CreatePubSubRoutingEndpoint<TTransport>(string name, Action<EndpointConfiguration> subscriptionPersistenceConfig, string poisonQueue, Action<TransportExtensions<TTransport>> transportCustomization, PubSubInfrastructure pubSubInfrastructure)
-        where TTransport : TransportDefinition, new()
-    {
-        var dispatcherConfig = new EndpointConfiguration(name);
-        dispatcherConfig.SendOnly();
-        dispatcherConfig.GetSettings().Set("NServiceBus.Bridge.LocalAddress", name);
-        dispatcherConfig.EnableFeature<PubSubInfrastructureBuilderFeature>();
-        dispatcherConfig.RegisterComponents(c =>
-        {
-            c.RegisterSingleton(pubSubInfrastructure);
-        });
-        var transport = dispatcherConfig.UseTransport<TTransport>();
-        var settings = transport.GetSettings();
-        SetTransportSpecificFlags(settings, poisonQueue);
-        transportCustomization?.Invoke(transport);
-        subscriptionPersistenceConfig?.Invoke(dispatcherConfig);
-
-        dispatcherConfig.AssemblyScanner().ScanAppDomainAssemblies = false;
-        dispatcherConfig.AssemblyScanner().ExcludeAssemblies("NServiceBus.AcceptanceTesting");
-        return dispatcherConfig;
-    }
-
-    static void SetTransportSpecificFlags(SettingsHolder settings, string poisonQueue)
+    static void SetTransportSpecificFlags(SettingsHolder settings, string poisonQueue, string localAddress)
     {
         settings.Set("errorQueue", poisonQueue);
         settings.Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", true);
+        settings.RegisterReceivingComponent(localAddress);
     }
 
-    public Task Forward(string source, MessageContext context, PubSubInfrastructure inboundPubSubInfra)
+    public Task Forward(string source, MessageContext context)
     {
         return interceptMethod(source, context, sender.Dispatch, 
-            dispatch => Forward(context, inboundPubSubInfra, new InterceptingDispatcher(sender, dispatch)));
+            dispatch => Forward(source, context, new InterceptingDispatcher(sender, dispatch)));
     }
 
-    Task Forward(MessageContext context, PubSubInfrastructure inboundPubSubInfra, IRawEndpoint dispatcher)
+    Task Forward(string source, MessageContext context, IRawEndpoint dispatcher)
     {
         var intent = GetMesssageIntent(context);
 
@@ -75,11 +60,11 @@ class Port<T> : IPort
         {
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
-                return SubscribeRouter.Route(context, intent, dispatcher, pubSubInfra.SubscribeForwarder, inboundPubSubInfra.SubscriptionStorage, nullForwarding);
+                return subscriptionForwarder.Forward(context, intent, dispatcher, forwarding);
             case MessageIntentEnum.Publish:
-                return pubSubInfra.PublishRouter.Route(context, intent, dispatcher);
+                return publishRouter.Route(context, dispatcher);
             case MessageIntentEnum.Send:
-                return sendRouter.Route(context, dispatcher, nullForwarding);
+                return sendRouter.Route(context, dispatcher, forwarding, source);
             case MessageIntentEnum.Reply:
                 return replyRouter.Route(context, intent, dispatcher);
             default:
@@ -97,11 +82,11 @@ class Port<T> : IPort
         return messageIntent;
     }
 
-    public async Task Initialize(Func<MessageContext, PubSubInfrastructure, Task> onMessage)
+    public async Task Initialize(Func<MessageContext, Task> onMessage)
     {
         this.onMessage = onMessage;
-        pubSubRoutingEndpoint = await Endpoint.Start(routerEndpointConfig).ConfigureAwait(false);
         sender = await rawConfig.Create().ConfigureAwait(false);
+        routingConfiguration.PreparePubSub(sender.Settings.Get<TransportInfrastructure>(), out publishRouter, out subscriptionReceiver, out subscriptionForwarder);
     }
 
     public async Task StartReceiving()
@@ -111,10 +96,6 @@ class Port<T> : IPort
 
     public async Task StopReceiving()
     {
-        if (pubSubRoutingEndpoint != null)
-        {
-            await pubSubRoutingEndpoint.Stop().ConfigureAwait(false);
-        }
         if (receiver != null)
         {
             stoppable = await receiver.StopReceiving().ConfigureAwait(false);
@@ -134,17 +115,19 @@ class Port<T> : IPort
         }
     }
 
+    RoutingConfiguration routingConfiguration;
     InterceptMessageForwarding interceptMethod;
-    Func<MessageContext, PubSubInfrastructure, Task> onMessage;
-    IEndpointInstance pubSubRoutingEndpoint;
+    InterBridgeRoutingSettings forwarding;
+    Func<MessageContext, Task> onMessage;
     IReceivingRawEndpoint receiver;
     IStartableRawEndpoint sender;
     IStoppableRawEndpoint stoppable;
 
+    SubscriptionReceiver subscriptionReceiver;
+    SubscriptionForwarder subscriptionForwarder;
+    IPublishRouter publishRouter;
+
     ThrottlingRawEndpointConfig<T> rawConfig;
-    EndpointConfiguration routerEndpointConfig;
-    PubSubInfrastructure pubSubInfra;
     SendRouter sendRouter;
     ReplyRouter replyRouter;
-    InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
 }

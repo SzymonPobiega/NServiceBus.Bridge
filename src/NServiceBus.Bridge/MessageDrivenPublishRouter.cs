@@ -11,7 +11,7 @@ using NServiceBus.Transport;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
-class MessageDrivenPublishRouter : IRouter
+class MessageDrivenPublishRouter : IPublishRouter
 {
     ISubscriptionStorage subscriptionStorage;
     RawDistributionPolicy distributionPolicy;
@@ -22,7 +22,7 @@ class MessageDrivenPublishRouter : IRouter
         this.distributionPolicy = distributionPolicy;
     }
 
-    public async Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    public async Task Route(MessageContext context, IRawEndpoint dispatcher)
     {
         string messageTypes;
         if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out messageTypes))

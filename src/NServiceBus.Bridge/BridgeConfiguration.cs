@@ -3,7 +3,7 @@
     using System;
     using Routing;
     using Transport;
-    using Persistence;
+    using Unicast.Subscriptions.MessageDrivenSubscriptions;
 
     /// <summary>
     /// Configures the bridge that can forward messages between different transports. A bridge is almost symmetrical in the sense that messages
@@ -16,11 +16,13 @@
         where TLeft : TransportDefinition, new()
         where TRight : TransportDefinition, new()
     {
+        static InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
+
         internal string LeftName;
         internal string RightName;
         Action<TransportExtensions<TLeft>> leftCustomization;
         Action<TransportExtensions<TRight>> rightCustomization;
-        Action<EndpointConfiguration> subscriptionPersistenceConfig;
+        ISubscriptionStorage subscriptionStorage;
         bool autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
@@ -37,16 +39,9 @@
         /// <summary>
         /// Configures the bridge to use specified subscription persistence.
         /// </summary>
-        /// <typeparam name="TPersistence">Type of persistence.</typeparam>
-        /// <param name="subscriptionPersistenceConfiguration">A callback for configuring selected persistence.</param>
-        public void UseSubscriptionPersistence<TPersistence>(Action<EndpointConfiguration, PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
-            where TPersistence : PersistenceDefinition
+        public void UseSubscriptionPersistence(ISubscriptionStorage subscriptionStorage)
         {
-            subscriptionPersistenceConfig = e =>
-            {
-                var persistence = e.UsePersistence<TPersistence>();
-                subscriptionPersistenceConfiguration(e, persistence);
-            };
+            this.subscriptionStorage = subscriptionStorage;
         }
 
         /// <summary>
@@ -113,10 +108,33 @@
         /// </summary>
         public IBridge Create()
         {
-            return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
-                EndpointInstances, subscriptionPersistenceConfig, DistributionPolicy, "poison",
-                leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
-                ImmediateRetries, DelayedRetries, CircuitBreakerThreshold);
+            //var routing = new RoutingConfiguration(new RuntimeTypeGenerator(), EndpointInstances, subscriptionStorage, DistributionPolicy);
+            //return new Bridge<TLeft,TRight>(LeftName, RightName, autoCreateQueues, autoCreateQueuesIdentity, 
+            //    routing, "poison", leftCustomization, rightCustomization, maximumConcurrency, interceptForwarding, Forwarding,
+            //    ImmediateRetries, DelayedRetries, CircuitBreakerThreshold);
+
+            var routing = new RoutingConfiguration(new RuntimeTypeGenerator(), EndpointInstances, subscriptionStorage, DistributionPolicy);
+
+            var leftPort = new Port<TLeft>(LeftName, leftCustomization, routing, "poison", maximumConcurrency, interceptForwarding, autoCreateQueues, 
+                autoCreateQueuesIdentity, ImmediateRetries, DelayedRetries, CircuitBreakerThreshold, nullForwarding);
+
+            var rightPort = new Port<TRight>(RightName, rightCustomization, routing, "poison", maximumConcurrency, interceptForwarding, autoCreateQueues,
+                autoCreateQueuesIdentity, ImmediateRetries, DelayedRetries, CircuitBreakerThreshold, Forwarding);
+
+            var @switch = new SwitchImpl(new IPort[]{leftPort, rightPort}, (incomingPort, context) =>
+            {
+                if (incomingPort == LeftName)
+                {
+                    return RightName;
+                }
+                if (incomingPort == RightName)
+                {
+                    return LeftName;
+                }
+                throw new Exception("Invalid incoming port.");
+            });
+
+            return @switch;
         }
     }
 }

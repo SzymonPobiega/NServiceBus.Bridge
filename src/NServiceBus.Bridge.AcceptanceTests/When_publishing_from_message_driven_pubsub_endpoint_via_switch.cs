@@ -18,9 +18,9 @@ public class When_publishing_from_message_driven_pubsub_endpoint_via_switch : NS
             .WithComponent(new SwitchComponent(() =>
             {
                 var cfg = new SwitchConfiguration();
-                cfg.AddPort<MsmqTransport>("Port1", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
-                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
-                cfg.AddPort<MsmqTransport>("Port3", t => { }).UseSubscriptionPersistence<InMemoryPersistence>(c => { });
+                cfg.AddPort<MsmqTransport>("Port1", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<MsmqTransport>("Port3", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
 
                 cfg.PortTable[Conventions.EndpointNamingConvention(typeof(Publisher))] = "Port1";
                 return cfg;

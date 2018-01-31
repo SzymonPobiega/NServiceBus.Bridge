@@ -12,16 +12,14 @@ class SendRouter
 {
     EndpointInstances endpointInstances;
     RawDistributionPolicy distributionPolicy;
-    string localPortName;
 
-    public SendRouter(EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy, string localPortName = null)
+    public SendRouter(EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy)
     {
         this.endpointInstances = endpointInstances;
         this.distributionPolicy = distributionPolicy;
-        this.localPortName = localPortName;
     }
 
-    public Task Route(MessageContext context, IRawEndpoint dispatcher, InterBridgeRoutingSettings routing)
+    public Task Route(MessageContext context, IRawEndpoint dispatcher, InterBridgeRoutingSettings routing, string sourcePort)
     {
         if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out var messageTypes))
         {
@@ -32,17 +30,17 @@ class SendRouter
 
         if (routing.SendRouteTable.TryGetValue(rootTypeFullName, out var nextHop))
         {
-            return Forward(context, dispatcher, nextHop);
+            return Forward(context, dispatcher, nextHop, sourcePort);
         }
 
         if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var destinationEndpoint))
         {
             throw new UnforwardableMessageException("Sent message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
-        return Forward(context, dispatcher, destinationEndpoint);
+        return Forward(context, dispatcher, destinationEndpoint, sourcePort);
     }
 
-    Task Forward(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint)
+    Task Forward(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint, string sourcePort)
     {
         var forwardedHeaders = new Dictionary<string, string>(context.Headers);
 
@@ -53,9 +51,9 @@ class SendRouter
         {
             // pipe-separated TLV format
             var newCorrelationId = $"id|{correlationId.Length}|{correlationId}|reply-to|{replyToHeader.Length}|{replyToHeader}";
-            if (localPortName != null)
+            if (sourcePort != null)
             {
-                newCorrelationId += $"|port|{localPortName.Length}|{localPortName}";
+                newCorrelationId += $"|port|{sourcePort.Length}|{sourcePort}";
             }
             forwardedHeaders[Headers.CorrelationId] = newCorrelationId;
         }

@@ -5,7 +5,6 @@ using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
 using NServiceBus.AcceptanceTests.EndpointTemplates;
 using NServiceBus.Bridge;
-using NServiceBus.Persistence.Sql;
 using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
@@ -15,17 +14,19 @@ public class When_using_sql_persistence : NServiceBusAcceptanceTest
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
+        var storage = new SqlSubscriptionStorage(
+            () => new SqlConnection(@"Data Source=.\SQLEXPRESS;Initial Catalog=nservicebus;Integrated Security=True"),
+            "Bridge", new SqlDialect.MsSqlServer(), null);
+
+        await storage.Install().ConfigureAwait(false);
+
+        //var storage = new InMemorySubscriptionStorage();
+
         var result = await Scenario.Define<Context>()
             .With(() =>
             {
                 var config = Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right");
-                config.UseSubscriptionPersistence<SqlPersistence>((e, c) =>
-                {
-                    c.ConnectionBuilder(() => new SqlConnection(@"Data Source=.\SQLEXPRESS;Initial Catalog=nservicebus;Integrated Security=True"));
-                    c.SqlDialect<SqlDialect.MsSqlServer>();
-                    c.SubscriptionSettings().DisableCache();
-                    e.EnableInstallers();
-                });
+                config.UseSubscriptionPersistence(storage);
                 return config;
             })
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))

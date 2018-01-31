@@ -6,21 +6,21 @@ using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Transport;
 
-class SwitchImpl : ISwitch
+class SwitchImpl : IBridge
 {
-    public SwitchImpl(IPort[] ports, Dictionary<string, string> routeTable)
+    public SwitchImpl(IPort[] ports, Func<string, MessageContext, string> resolveDestinationPort)
     {
-        this.routeTable = routeTable;
+        this.resolveDestinationPort = resolveDestinationPort;
         this.ports = ports.ToDictionary(x => x.Name, x => x);
     }
 
     public async Task Start()
     {
-        await Task.WhenAll(ports.Values.Select(p => p.Initialize((ctx, infra) => Forward(p.Name, ctx, infra)))).ConfigureAwait(false);
+        await Task.WhenAll(ports.Values.Select(p => p.Initialize(ctx => Forward(p.Name, ctx)))).ConfigureAwait(false);
         await Task.WhenAll(ports.Values.Select(p => p.StartReceiving())).ConfigureAwait(false);
     }
 
-    Task Forward(string incomingPort, MessageContext msg, PubSubInfrastructure inboundPubSubInfrastructure)
+    Task Forward(string incomingPort, MessageContext msg)
     {
         var intent = GetMesssageIntent(msg);
         string destinationPortName;
@@ -30,21 +30,21 @@ class SwitchImpl : ISwitch
             case MessageIntentEnum.Subscribe:
             case MessageIntentEnum.Unsubscribe:
             case MessageIntentEnum.Send:
-                destinationPortName = ResolveDestinationPort(msg);
+                destinationPortName = resolveDestinationPort(incomingPort, msg);
                 if (!ports.TryGetValue(destinationPortName, out destinationPort))
                 {
                     throw new UnforwardableMessageException($"Port '{destinationPortName}' is not configured");
                 }
-                return destinationPort.Forward(incomingPort, msg, inboundPubSubInfrastructure);
+                return destinationPort.Forward(incomingPort, msg);
             case MessageIntentEnum.Publish:
-                return Task.WhenAll(ports.Values.Where(p => p.Name != incomingPort).Select(x => x.Forward(incomingPort, msg, inboundPubSubInfrastructure)));
+                return Task.WhenAll(ports.Values.Where(p => p.Name != incomingPort).Select(x => x.Forward(incomingPort, msg)));
             case MessageIntentEnum.Reply:
                 destinationPortName = ResolveReplyDestinationPort(msg);
                 if (!ports.TryGetValue(destinationPortName, out destinationPort))
                 {
                     throw new UnforwardableMessageException($"Port '{destinationPortName}' is not configured");
                 }
-                return destinationPort.Forward(incomingPort, msg, inboundPubSubInfrastructure);
+                return destinationPort.Forward(incomingPort, msg);
             default:
                 throw new UnforwardableMessageException("Unroutable message intent: " + intent);
         }
@@ -88,24 +88,8 @@ class SwitchImpl : ISwitch
         return destinationPort;
     }
 
-    string ResolveDestinationPort(MessageContext context)
-    {
-        if (context.Headers.TryGetValue("NServiceBus.Bridge.DestinationPort", out var destinationPort))
-        {
-            return destinationPort;
-        }
-        string destinationEndpoint;
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out destinationEndpoint))
-        {
-            throw new UnforwardableMessageException("The message does not contain neither 'NServiceBus.Bridge.DestinationPort' header nor 'NServiceBus.Bridge.DestinationEndpoint' header.");
-        }
-        if (!routeTable.TryGetValue(destinationEndpoint, out destinationPort))
-        {
-            throw new UnforwardableMessageException($"The message does not contain 'NServiceBus.Bridge.DestinationPort' header and routing configuration does not have entry for endpoint '{destinationEndpoint}'.");
-        }
-        return destinationPort;
-    }
+    
 
     Dictionary<string, IPort> ports;
-    Dictionary<string, string> routeTable;
+    Func<string, MessageContext, string> resolveDestinationPort;
 }

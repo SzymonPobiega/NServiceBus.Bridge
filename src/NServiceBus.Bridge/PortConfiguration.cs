@@ -3,7 +3,7 @@
     using System;
     using Routing;
     using Transport;
-    using Persistence;
+    using Unicast.Subscriptions.MessageDrivenSubscriptions;
 
     /// <summary>
     /// Configures the switch port.
@@ -12,12 +12,14 @@
     public class PortConfiguration<T>
         where T : TransportDefinition, new()
     {
+        static InterBridgeRoutingSettings nullForwarding = new InterBridgeRoutingSettings();
+
         string Name;
         Action<TransportExtensions<T>> customization;
-        Action<EndpointConfiguration> subscriptionPersistenceConfig;
         bool? autoCreateQueues;
         string autoCreateQueuesIdentity;
         int? maximumConcurrency;
+        ISubscriptionStorage subscriptionStorage;
 
         internal PortConfiguration(string name, Action<TransportExtensions<T>> customization)
         {
@@ -26,18 +28,11 @@
         }
 
         /// <summary>
-        /// Configures the port to use selected subscription persistence for message-driven publish/subscribe routing.
+        /// Configures the port to use specified subscription persistence.
         /// </summary>
-        /// <typeparam name="TPersistence">Type of persistence.</typeparam>
-        /// <param name="subscriptionPersistenceConfiguration">A callback for configuring selected persistence.</param>
-        public void UseSubscriptionPersistence<TPersistence>(Action<PersistenceExtensions<TPersistence>> subscriptionPersistenceConfiguration)
-            where TPersistence : PersistenceDefinition
+        public void UseSubscriptionPersistence(ISubscriptionStorage subscriptionStorage)
         {
-            this.subscriptionPersistenceConfig = e =>
-            {
-                var persistence = e.UsePersistence<TPersistence>();
-                subscriptionPersistenceConfiguration(persistence);
-            };
+            this.subscriptionStorage = subscriptionStorage;
         }
 
         /// <summary>
@@ -71,8 +66,9 @@
 
         internal IPort Create(RuntimeTypeGenerator typeGenerator, string poisonQueue, bool? hubAutoCreateQueues, string hubAutoCreateQueuesIdentity, InterceptMessageForwarding interceptMethod, int immediateRetries, int delayedRetries, int circuitBreakerThreshold)
         {
-            return new Port<T>(Name, customization, subscriptionPersistenceConfig, EndpointInstances, DistributionPolicy, typeGenerator, poisonQueue, maximumConcurrency, interceptMethod,
-                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity, immediateRetries, delayedRetries, circuitBreakerThreshold);
+            var routing = new RoutingConfiguration(typeGenerator, EndpointInstances, subscriptionStorage, DistributionPolicy);
+            return new Port<T>(Name, customization, routing, poisonQueue, maximumConcurrency, interceptMethod,
+                autoCreateQueues ?? hubAutoCreateQueues ?? false, autoCreateQueuesIdentity ?? hubAutoCreateQueuesIdentity, immediateRetries, delayedRetries, circuitBreakerThreshold, nullForwarding);
         }
     }
 }

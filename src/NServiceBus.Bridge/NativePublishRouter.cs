@@ -7,7 +7,7 @@ using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
-class NativePublishRouter : IRouter
+class NativePublishRouter : IPublishRouter
 {
     RuntimeTypeGenerator typeGenerator;
 
@@ -16,7 +16,7 @@ class NativePublishRouter : IRouter
         this.typeGenerator = typeGenerator;
     }
 
-    public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    public Task Route(MessageContext context, IRawEndpoint dispatcher)
     {
         string messageTypes;
         if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out messageTypes))
