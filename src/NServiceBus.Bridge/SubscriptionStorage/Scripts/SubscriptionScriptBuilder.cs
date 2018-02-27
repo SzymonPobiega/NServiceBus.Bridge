@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Reflection;
-using System.Resources;
 using System.Text;
 using NServiceBus.Bridge;
 
