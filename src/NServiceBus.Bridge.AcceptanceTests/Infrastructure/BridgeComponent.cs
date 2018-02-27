@@ -58,7 +58,7 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
         public Runner(IBridge bridge, string name)
         {
             this.bridge = bridge;
-            this.Name = name;
+            Name = name;
         }
 
         public override Task Start(CancellationToken token)

@@ -46,7 +46,7 @@ class SwitchComponent : IComponentBehavior
         public Runner(IBridge @switch, string name)
         {
             this.@switch = @switch;
-            this.Name = name;
+            Name = name;
         }
 
         public override Task Start(CancellationToken token)
