@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net46</TargetFramework>
+    <TargetFrameworks>net46;netstandard2.0</TargetFrameworks>
     <OutputPath>..\..\binaries</OutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>NServiceBus.Bridge</RootNamespace>
@@ -30,6 +30,7 @@
     <PackageReference Include="GitVersionTask" Version="4.0.0-*" PrivateAssets="All" />
     <PackageReference Include="NServiceBus" Version="[7.0.0-rc0001, 8.0.0)" />
     <PackageReference Include="NServiceBus.Raw" Version="[3.0.0-rc0002, 4.0.0)" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.4.3" />
   </ItemGroup>
 
   <PropertyGroup>
