@@ -25,8 +25,8 @@ namespace NServiceBus.Bridge
             {
                 return destinationPort;
             }
-            string destinationEndpoint;
-            if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out destinationEndpoint))
+
+            if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var destinationEndpoint))
             {
                 throw new UnforwardableMessageException("The message does not contain neither 'NServiceBus.Bridge.DestinationPort' header nor 'NServiceBus.Bridge.DestinationEndpoint' header.");
             }

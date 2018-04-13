@@ -24,8 +24,7 @@ class MessageDrivenPublishRouter : IPublishRouter
 
     public async Task Route(MessageContext context, IRawEndpoint dispatcher)
     {
-        string messageTypes;
-        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out messageTypes))
+        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out var messageTypes))
         {
             throw new UnforwardableMessageException("Message need to have 'NServiceBus.EnclosedMessageTypes' header in order to be routed.");
         }
@@ -56,8 +55,7 @@ class MessageDrivenPublishRouter : IPublishRouter
 
             groups = groups ?? new Dictionary<string, List<string>>();
 
-            List<string> transportAddresses;
-            if (groups.TryGetValue(subscriber.Endpoint, out transportAddresses))
+            if (groups.TryGetValue(subscriber.Endpoint, out var transportAddresses))
             {
                 transportAddresses.Add(subscriber.TransportAddress);
             }

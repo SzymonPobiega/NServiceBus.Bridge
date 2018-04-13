@@ -21,10 +21,9 @@ abstract class SubscriptionReceiver
             throw new UnforwardableMessageException("Subscription messages need to have intent set to Subscribe/Unsubscribe.");
         }
 
-        string subscriberAddress;
         string subscriberEndpoint = null;
 
-        if (context.Headers.TryGetValue(Headers.SubscriberTransportAddress, out subscriberAddress))
+        if (context.Headers.TryGetValue(Headers.SubscriberTransportAddress, out var subscriberAddress))
         {
             subscriberEndpoint = context.Headers[Headers.SubscriberEndpoint];
         }

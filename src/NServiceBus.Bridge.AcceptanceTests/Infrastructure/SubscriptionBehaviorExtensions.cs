@@ -40,8 +40,7 @@ static class SubscriptionBehaviorExtensions
             var subscriptionMessageType = GetSubscriptionMessageTypeFrom(context.Message);
             if (subscriptionMessageType != null)
             {
-                string returnAddress;
-                if (!context.Message.Headers.TryGetValue(Headers.SubscriberTransportAddress, out returnAddress))
+                if (!context.Message.Headers.TryGetValue(Headers.SubscriberTransportAddress, out var returnAddress))
                 {
                     context.Message.Headers.TryGetValue(Headers.ReplyToAddress, out returnAddress);
                 }
@@ -62,8 +61,7 @@ static class SubscriptionBehaviorExtensions
 
         static string GetSubscriptionMessageTypeFrom(IncomingMessage msg)
         {
-            string headerValue;
-            return msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out headerValue) ? headerValue : null;
+            return msg.Headers.TryGetValue(Headers.SubscriptionMessageType, out var headerValue) ? headerValue : null;
         }
 
         Action<SubscriptionEventArgs, TContext> action;
