@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if NET461
+using System;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus;
@@ -16,9 +17,10 @@ using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
 {
     [Test]
+    [Explicit]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
-        var bridgeConfig = Bridge.Between<MsmqTransport>("Left").And<AzureServiceBusTransport>("Right", extensions =>
+        var bridgeConfig = Bridge.Between<TestTransport>("Left", t => t.Configure()).And<AzureServiceBusTransport>("Right", extensions =>
         {
             var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
             extensions.ConnectionString(connString);
@@ -59,7 +61,7 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<TestTransport>().Routing();
                 var ramp = routing.ConnectToBridge("Left");
                 ramp.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Receiver)));
             });
@@ -120,3 +122,4 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
     {
     }
 }
+#endif

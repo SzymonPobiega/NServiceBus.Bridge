@@ -25,7 +25,7 @@ public class When_using_sql_persistence : NServiceBusAcceptanceTest
         var result = await Scenario.Define<Context>()
             .With(() =>
             {
-                var config = Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("Right");
+                var config = Bridge.Between<TestTransport>("Left", t => t.Configure()).And<TestTransport>("Right", t => t.Configure());
                 config.UseSubscriptionPersistence(storage);
                 return config;
             })
@@ -54,7 +54,7 @@ public class When_using_sql_persistence : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>().Configure();
+                c.UseTransport<TestTransport>().Configure();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -77,7 +77,7 @@ public class When_using_sql_persistence : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("Right");
                 bridge.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
@@ -106,7 +106,7 @@ public class When_using_sql_persistence : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("Right");
                 bridge.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

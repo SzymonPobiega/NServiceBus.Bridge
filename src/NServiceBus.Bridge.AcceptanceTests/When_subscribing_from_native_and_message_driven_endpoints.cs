@@ -24,7 +24,7 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
                 cfg.AddPort<RabbitMQTransport>("Port1", t => t.Configure()).LimitMessageProcessingConcurrencyTo(1);
 
                 //BaseEventSubscriber - MSMQ
-                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<TestTransport>("Port2", t => t.Configure()).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
 
                 //DerivedEventSubscriber - RabbitMQ
                 cfg.AddPort<RabbitMQTransport>("Port3", t => t.Configure());
@@ -99,7 +99,7 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("Port2");
                 bridge.RegisterPublisher(typeof(MyBaseEvent3), Conventions.EndpointNamingConvention(typeof(Publisher)));
                 bridge.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);

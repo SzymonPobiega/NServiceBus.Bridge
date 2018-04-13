@@ -5,6 +5,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>NServiceBus.Bridge</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>latest</LangVersion>
+
   </PropertyGroup>
   <ItemGroup>
     <None Remove="SubscriptionStorage\Scripts\Create_MsSqlServer.sql" />

@@ -13,8 +13,8 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
     [Test]
     public async Task It_should_deliver_the_message()
     {
-        var leftBridge = Bridge.Between<MsmqTransport>("LeftMSMQ").And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
-        var rightBridge = Bridge.Between<MsmqTransport>("RightMSMQ").And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
+        var leftBridge = Bridge.Between<TestTransport>("LeftMSMQ", t => t.Configure()).And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
+        var rightBridge = Bridge.Between<TestTransport>("RightMSMQ", t => t.Configure()).And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
         rightBridge.Forwarding.RegisterPublisher(typeof(MyEvent).FullName, "LeftRabbit");
         var result = await Scenario.Define<Context>()
             .With(leftBridge)
@@ -40,7 +40,7 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>().Configure();
+                c.UseTransport<TestTransport>().Configure();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -56,7 +56,7 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("RightMSMQ");
                 bridge.RegisterPublisher(typeof(MyEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

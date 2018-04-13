@@ -7,9 +7,9 @@ static class CleanUpHelper
 {
     public static Task CleanupQueue(RunSummary summary, string queue, Type transport)
     {
-        if (transport == typeof(MsmqTransport))
+        if (transport == typeof(TestTransport))
         {
-            return ConfigureEndpointMsmqTransport.DeleteQueue(summary, queue);
+            return ConfigureEndpointLearningTransport.DeleteQueue(summary, queue);
         }
         if (transport == typeof(RabbitMQTransport))
         {

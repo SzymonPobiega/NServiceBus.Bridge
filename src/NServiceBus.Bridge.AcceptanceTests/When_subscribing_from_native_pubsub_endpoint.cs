@@ -14,7 +14,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var result = await Scenario.Define<Context>()
-            .With(Bridge.Between<MsmqTransport>("Left").And<RabbitMQTransport>("Right", t => t.Configure()))
+            .With(Bridge.Between<TestTransport>("Left", t => t.Configure()).And<RabbitMQTransport>("Right", t => t.Configure()))
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent2())))
             .WithEndpoint<BaseEventSubscriber>()
             .WithEndpoint<DerivedEventSubscriber>()
@@ -40,7 +40,7 @@ public class When_subscribing_from_native_pubsub_endpoint : NServiceBusAcceptanc
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>().Configure();
+                c.UseTransport<TestTransport>().Configure();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {

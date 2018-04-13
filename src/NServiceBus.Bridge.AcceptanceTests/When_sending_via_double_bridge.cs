@@ -13,10 +13,10 @@ public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
     [Test]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
-        var leftBridge = Bridge.Between<MsmqTransport>("LeftMSMQ").And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
+        var leftBridge = Bridge.Between<TestTransport>("LeftMSMQ", t => t.Configure()).And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
         leftBridge.Forwarding.ForwardTo(typeof(MyRequest).FullName, "RightRabbit");
 
-        var rightBridge = Bridge.Between<MsmqTransport>("RightMSMQ").And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
+        var rightBridge = Bridge.Between<TestTransport>("RightMSMQ", t => t.Configure()).And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
 
         var result = await Scenario.Define<Context>()
             .With(leftBridge)
@@ -42,7 +42,7 @@ public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().Configure().Routing();
                 var bridge = routing.ConnectToBridge("LeftMSMQ");
                 bridge.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Receiver)));
             });
@@ -72,7 +72,7 @@ public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for reply
-                c.UseTransport<MsmqTransport>().Configure();
+                c.UseTransport<TestTransport>().Configure();
             });
         }
 

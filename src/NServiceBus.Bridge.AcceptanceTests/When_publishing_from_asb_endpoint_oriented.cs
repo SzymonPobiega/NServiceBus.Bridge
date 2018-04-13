@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if NET461
+
+using System;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus;
@@ -19,6 +21,7 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
     static string PublisherEndpointName => Conventions.EndpointNamingConvention(typeof(Publisher));
 
     [Test]
+    [Explicit]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var bridgeConfiguration = Bridge.Between<AzureServiceBusTransport>("Left", t =>
@@ -31,7 +34,10 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
             var serializer = Tuple.Create(new NewtonsoftSerializer() as SerializationDefinition, new SettingsHolder());
             settings.Set("MainSerializer", serializer);
 
-        }).And<MsmqTransport>("Right");
+        }).And<TestTransport>("Right", t =>
+        {
+            t.Configure();
+        });
 
         bridgeConfiguration.InterceptForwarding((queue, message, dispatch, forward) =>
         {
@@ -101,7 +107,7 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
             EndpointSetup<DefaultServer>(c =>
             {
                 c.DisableFeature<AutoSubscribe>();
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<TestTransport>().Routing();
                 var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyAsbEvent), PublisherEndpointName);
                 ramp.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
@@ -134,3 +140,4 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
 class MyAsbEvent : IEvent
 {
 }
+#endif

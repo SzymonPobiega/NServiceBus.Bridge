@@ -32,3 +32,4 @@ _ReSharper*/
 packages/
 binaries/
 nugets/
+src/.learningtransport/
