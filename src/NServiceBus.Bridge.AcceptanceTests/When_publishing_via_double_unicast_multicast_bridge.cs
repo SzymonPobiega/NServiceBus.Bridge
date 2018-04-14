@@ -13,9 +13,9 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
     [Test]
     public async Task It_should_deliver_the_message()
     {
-        var leftBridge = Bridge.Between<TestTransport>("LeftMSMQ", t => t.Configure()).And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
-        var rightBridge = Bridge.Between<TestTransport>("RightMSMQ", t => t.Configure()).And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
-        rightBridge.Forwarding.RegisterPublisher(typeof(MyEvent).FullName, "LeftRabbit");
+        var leftBridge = Bridge.Between<TestTransport>("LeftA", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("LeftB", ext => ext.ConfigureNativePubSubBrokerB());
+        var rightBridge = Bridge.Between<TestTransport>("RightA", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("RightB", ext => ext.ConfigureNativePubSubBrokerB());
+        rightBridge.Forwarding.RegisterPublisher(typeof(MyEvent).FullName, "LeftB");
         var result = await Scenario.Define<Context>()
             .With(leftBridge)
             .With(rightBridge)
@@ -40,7 +40,7 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<TestTransport>().Configure();
+                c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -56,8 +56,8 @@ public class When_publishing_via_double_unicast_multicast_bridge : NServiceBusAc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<TestTransport>().Configure().Routing();
-                var bridge = routing.ConnectToBridge("RightMSMQ");
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
+                var bridge = routing.ConnectToBridge("RightA");
                 bridge.RegisterPublisher(typeof(MyEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
         }

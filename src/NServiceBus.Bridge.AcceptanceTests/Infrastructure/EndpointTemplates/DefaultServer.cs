@@ -50,21 +50,6 @@
             configuration.GetSettings().SetDefault("ScaleOut.UseSingleBrokerQueue", true);
             configurationBuilderCustomization(configuration);
 
-            //Hack to make other transports work when RabbitMQ is referenced
-            configuration.GetSettings().Set("RabbitMQ.RoutingTopologySupportsDelayedDelivery", false);
-
-            var transportDef = configuration.GetSettings().Get<TransportDefinition>();
-            var queueBindings = configuration.GetSettings().Get<QueueBindings>();
-
-            runDescriptor.OnTestCompleted(async summary =>
-            {
-                var allQueues = queueBindings.ReceivingAddresses.Concat(queueBindings.SendingAddresses);
-                foreach (var queue in allQueues)
-                {
-                    await CleanUpHelper.CleanupQueue(summary, queue, transportDef.GetType());
-                }
-            });
-
             return configuration;
         }
 

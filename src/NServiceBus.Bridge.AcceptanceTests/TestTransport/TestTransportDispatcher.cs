@@ -7,14 +7,13 @@ namespace NServiceBus
     using System.Text;
     using System.Threading.Tasks;
     using DelayedDelivery;
-    using DeliveryConstraints;
     using Extensibility;
     using Performance.TimeToBeReceived;
     using Transport;
 
-    class LearningTransportDispatcher : IDispatchMessages
+    class TestTransportDispatcher : IDispatchMessages
     {
-        public LearningTransportDispatcher(string basePath, int maxMessageSizeKB)
+        public TestTransportDispatcher(string basePath, int maxMessageSizeKB)
         {
             if (maxMessageSizeKB > int.MaxValue / 1024)
             {
@@ -67,11 +66,11 @@ namespace NServiceBus
 
             var nativeMessageId = Guid.NewGuid().ToString();
             var destinationPath = Path.Combine(basePath, destination);
-            var bodyDir = Path.Combine(destinationPath, LearningTransportMessagePump.BodyDirName);
+            var bodyDir = Path.Combine(destinationPath, TestTransportMessagePump.BodyDirName);
 
             Directory.CreateDirectory(bodyDir);
 
-            var bodyPath = Path.Combine(bodyDir, nativeMessageId) + LearningTransportMessagePump.BodyFileSuffix;
+            var bodyPath = Path.Combine(bodyDir, nativeMessageId) + TestTransportMessagePump.BodyFileSuffix;
 
             await AsyncFile.WriteBytes(bodyPath, message.Body)
                 .ConfigureAwait(false);
@@ -96,7 +95,7 @@ namespace NServiceBus
                     timeToDeliver += TimeSpan.FromSeconds(1);
                 }
 
-                destinationPath = Path.Combine(destinationPath, LearningTransportMessagePump.DelayedDirName, timeToDeliver.Value.ToString("yyyyMMddHHmmss"));
+                destinationPath = Path.Combine(destinationPath, TestTransportMessagePump.DelayedDirName, timeToDeliver.Value.ToString("yyyyMMddHHmmss"));
 
                 Directory.CreateDirectory(destinationPath);
             }
@@ -108,7 +107,7 @@ namespace NServiceBus
                     throw new Exception($"Postponed delivery of messages with TimeToBeReceived set is not supported. Remove the TimeToBeReceived attribute to postpone messages of type '{message.Headers[Headers.EnclosedMessageTypes]}'.");
                 }
 
-                message.Headers[LearningTransportHeaders.TimeToBeReceived] = timeToBeReceived.MaxTime.ToString();
+                message.Headers[TestTransportHeaders.TimeToBeReceived] = timeToBeReceived.MaxTime.ToString();
             }
 
             var messagePath = Path.Combine(destinationPath, nativeMessageId) + ".metadata.txt";
@@ -121,7 +120,7 @@ namespace NServiceBus
                 throw new Exception($"The total size of the '{message.Headers[Headers.EnclosedMessageTypes]}' message body ({message.Body.Length} bytes) plus headers ({headerSize} bytes) is larger than {maxMessageSizeKB} KB and will not be supported on some production transports. Consider using the NServiceBus DataBus or the claim check pattern to avoid messages with a large payload. Use 'EndpointConfiguration.UseTransport<TestTransport>().NoPayloadSizeRestriction()' to disable this check and proceed with the current message size.");
             }
 
-            if (transportOperation.RequiredDispatchConsistency != DispatchConsistency.Isolated && transaction.TryGet(out ILearningTransportTransaction directoryBasedTransaction))
+            if (transportOperation.RequiredDispatchConsistency != DispatchConsistency.Isolated && transaction.TryGet(out ITestTransportTransaction directoryBasedTransaction))
             {
                 await directoryBasedTransaction.Enlist(messagePath, headerPayload)
                     .ConfigureAwait(false);

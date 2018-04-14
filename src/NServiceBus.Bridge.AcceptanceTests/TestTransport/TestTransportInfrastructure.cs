@@ -11,9 +11,9 @@
     using Settings;
     using Transport;
 
-    class LearningTransportInfrastructure : TransportInfrastructure
+    class TestTransportInfrastructure : TransportInfrastructure
     {
-        public LearningTransportInfrastructure(SettingsHolder settings)
+        public TestTransportInfrastructure(SettingsHolder settings)
         {
             this.settings = settings;
 
@@ -67,14 +67,14 @@
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
-            return new TransportReceiveInfrastructure(() => new LearningTransportMessagePump(storagePath), () => new LearningTransportQueueCreator(), () => Task.FromResult(StartupCheckResult.Success));
+            return new TransportReceiveInfrastructure(() => new TestTransportMessagePump(storagePath), () => new TestTransportQueueCreator(), () => Task.FromResult(StartupCheckResult.Success));
         }
 
         public override TransportSendInfrastructure ConfigureSendInfrastructure()
         {
             var maxPayloadSize = settings.GetOrDefault<bool>(NoPayloadSizeRestrictionKey) ? int.MaxValue / 1024 : 64; //64 kB is the max size of the ASQ transport
 
-            return new TransportSendInfrastructure(() => new LearningTransportDispatcher(storagePath, maxPayloadSize), () => Task.FromResult(StartupCheckResult.Success));
+            return new TransportSendInfrastructure(() => new TestTransportDispatcher(storagePath, maxPayloadSize), () => Task.FromResult(StartupCheckResult.Success));
         }
 
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
@@ -87,7 +87,7 @@
                 var localAddress = settings.LocalAddress();
                 PathChecker.ThrowForBadPath(localAddress, "localAddress");
 
-                return new LearningTransportSubscriptionManager(storagePath, endpointName, localAddress);
+                return new TestTransportSubscriptionManager(storagePath, endpointName, localAddress);
             });
         }
 
@@ -122,8 +122,8 @@
         string storagePath;
         SettingsHolder settings;
 
-        public const string StorageLocationKey = "LearningTransport.StoragePath";
-        public const string NoPayloadSizeRestrictionKey = "LearningTransport.NoPayloadSizeRestrictionKey";
-        public const string NoNativePubSub = "LearningTransport.NoNativePubSub";
+        public const string StorageLocationKey = "TestTransport.StoragePath";
+        public const string NoPayloadSizeRestrictionKey = "TestTransport.NoPayloadSizeRestrictionKey";
+        public const string NoNativePubSub = "TestTransport.NoNativePubSub";
     }
 }

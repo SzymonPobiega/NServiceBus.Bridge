@@ -20,7 +20,7 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
     [Explicit]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
-        var bridgeConfig = Bridge.Between<TestTransport>("Left", t => t.Configure()).And<AzureServiceBusTransport>("Right", extensions =>
+        var bridgeConfig = Bridge.Between<TestTransport>("Left", t => t.ConfigureNoNativePubSubBrokerA()).And<AzureServiceBusTransport>("Right", extensions =>
         {
             var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
             extensions.ConnectionString(connString);

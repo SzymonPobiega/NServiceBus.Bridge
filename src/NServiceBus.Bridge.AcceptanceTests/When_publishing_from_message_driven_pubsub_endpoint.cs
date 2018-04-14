@@ -14,7 +14,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var result = await Scenario.Define<Context>()
-            .With(Bridge.Between<TestTransport>("Left", t => t.Configure()).And<TestTransport>("Right", t => t.Configure()))
+            .With(Bridge.Between<TestTransport>("Left", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("Right", t => t.ConfigureNoNativePubSubBrokerA()))
             .WithEndpoint<Publisher>(c => c.When(x => x.BaseEventSubscribed && x.DerivedEventSubscribed, s => s.Publish(new MyDerivedEvent())))
             .WithEndpoint<BaseEventSubscriber>()
             .WithEndpoint<DerivedEventSubscriber>()
@@ -40,7 +40,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<TestTransport>().Configure();
+                c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -63,7 +63,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<TestTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var bridge = routing.ConnectToBridge("Right");
                 bridge.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
@@ -92,7 +92,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint : NServiceBusAc
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<TestTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var bridge = routing.ConnectToBridge("Right");
                 bridge.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

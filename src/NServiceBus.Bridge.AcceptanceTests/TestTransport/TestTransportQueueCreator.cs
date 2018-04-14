@@ -3,7 +3,7 @@
     using System.Threading.Tasks;
     using Transport;
 
-    class LearningTransportQueueCreator : ICreateQueues
+    class TestTransportQueueCreator : ICreateQueues
     {
         public Task CreateQueueIfNecessary(QueueBindings queueBindings, string identity) => Task.CompletedTask;
     }

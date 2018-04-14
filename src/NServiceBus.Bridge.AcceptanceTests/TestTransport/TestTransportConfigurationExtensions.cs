@@ -16,7 +16,7 @@
         {
             PathChecker.ThrowForBadPath(path, "StorageDirectory");
 
-            transportExtensions.GetSettings().Set(LearningTransportInfrastructure.StorageLocationKey, path);
+            transportExtensions.GetSettings().Set(TestTransportInfrastructure.StorageLocationKey, path);
         }
 
         /// <summary>
@@ -25,7 +25,7 @@
         /// <param name="transportExtensions">The transport extensions to extend.</param>
         public static void NoPayloadSizeRestriction(this TransportExtensions<TestTransport> transportExtensions)
         {
-            transportExtensions.GetSettings().Set(LearningTransportInfrastructure.NoPayloadSizeRestrictionKey, true);
+            transportExtensions.GetSettings().Set(TestTransportInfrastructure.NoPayloadSizeRestrictionKey, true);
         }
 
         /// <summary>
@@ -34,7 +34,7 @@
         /// <param name="transportExtensions"></param>
         public static void NoNativePubSub(this TransportExtensions<TestTransport> transportExtensions)
         {
-            transportExtensions.GetSettings().Set(LearningTransportInfrastructure.NoNativePubSub, true);
+            transportExtensions.GetSettings().Set(TestTransportInfrastructure.NoNativePubSub, true);
         }
     }
 }

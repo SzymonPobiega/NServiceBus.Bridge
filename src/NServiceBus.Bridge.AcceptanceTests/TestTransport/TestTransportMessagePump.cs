@@ -10,9 +10,9 @@
     using Logging;
     using Transport;
 
-    class LearningTransportMessagePump : IPushMessages
+    class TestTransportMessagePump : IPushMessages
     {
-        public LearningTransportMessagePump(string basePath)
+        public TestTransportMessagePump(string basePath)
         {
             this.basePath = basePath;
         }
@@ -149,7 +149,7 @@
                     await concurrencyLimiter.WaitAsync(cancellationToken)
                         .ConfigureAwait(false);
 
-                    ILearningTransportTransaction transaction;
+                    ITestTransportTransaction transaction;
 
                     try
                     {
@@ -218,7 +218,7 @@
             }
         }
 
-        ILearningTransportTransaction GetTransaction()
+        ITestTransportTransaction GetTransaction()
         {
             if (transactionMode == TransportTransactionMode.None)
             {
@@ -228,7 +228,7 @@
             return new DirectoryBasedTransaction(messagePumpBasePath, PendingDirName, CommittedDirName, Guid.NewGuid().ToString());
         }
 
-        async Task ProcessFile(ILearningTransportTransaction transaction, string messageId)
+        async Task ProcessFile(ITestTransportTransaction transaction, string messageId)
         {
             var message = await AsyncFile.ReadText(transaction.FileToProcess)
                     .ConfigureAwait(false);
@@ -236,9 +236,9 @@
             var bodyPath = Path.Combine(bodyDir, $"{messageId}{BodyFileSuffix}");
             var headers = HeaderSerializer.Deserialize(message);
 
-            if (headers.TryGetValue(LearningTransportHeaders.TimeToBeReceived, out var ttbrString))
+            if (headers.TryGetValue(TestTransportHeaders.TimeToBeReceived, out var ttbrString))
             {
-                headers.Remove(LearningTransportHeaders.TimeToBeReceived);
+                headers.Remove(TestTransportHeaders.TimeToBeReceived);
 
                 var ttbr = TimeSpan.Parse(ttbrString);
 
@@ -334,7 +334,7 @@
         CriticalError criticalError;
 
 
-        static ILog log = LogManager.GetLogger<LearningTransportMessagePump>();
+        static ILog log = LogManager.GetLogger<TestTransportMessagePump>();
 
         public const string BodyFileSuffix = ".body.txt";
         public const string BodyDirName = ".bodies";

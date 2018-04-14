@@ -28,7 +28,6 @@ class SwitchComponent : IComponentBehavior
                 var port = factory();
                 var portType = port.GetType();
                 var portTransportType = portType.GetGenericArguments()[0];
-                run.OnTestCompleted(summary => CleanUpHelper.CleanupQueue(summary, port.Name, portTransportType));
                 return port;
             }
             newFactories.Add(NewFactory);

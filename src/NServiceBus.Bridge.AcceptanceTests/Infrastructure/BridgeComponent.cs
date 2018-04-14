@@ -45,9 +45,6 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
         config.AutoCreateQueues();
         var bridge = config.Create();
         
-        run.OnTestCompleted(summary => CleanUpHelper.CleanupQueue(summary, config.LeftName, typeof(TLeft)));
-        run.OnTestCompleted(summary => CleanUpHelper.CleanupQueue(summary, config.RightName, typeof(TRight)));
-
         return Task.FromResult<ComponentRunner>(new Runner(bridge, $"{config.LeftName}<->{config.RightName}"));
     }
 

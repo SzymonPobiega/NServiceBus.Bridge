@@ -36,7 +36,7 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
 
         }).And<TestTransport>("Right", t =>
         {
-            t.Configure();
+            t.ConfigureNoNativePubSubBrokerA();
         });
 
         bridgeConfiguration.InterceptForwarding((queue, message, dispatch, forward) =>

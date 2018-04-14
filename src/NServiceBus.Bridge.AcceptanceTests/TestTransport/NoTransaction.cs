@@ -4,7 +4,7 @@ namespace NServiceBus
     using System.IO;
     using System.Threading.Tasks;
 
-    class NoTransaction : ILearningTransportTransaction
+    class NoTransaction : ITestTransportTransaction
     {
         public NoTransaction(string basePath, string pendingDirName)
         {

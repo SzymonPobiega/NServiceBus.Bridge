@@ -5,7 +5,7 @@ namespace NServiceBus
     using System.Threading.Tasks;
     using Logging;
 
-    class DirectoryBasedTransaction : ILearningTransportTransaction
+    class DirectoryBasedTransaction : ITestTransportTransaction
     {
         public DirectoryBasedTransaction(string basePath, string pendingDirName, string committedDirName, string transactionId)
         {
