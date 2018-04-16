@@ -26,8 +26,6 @@ class SwitchComponent : IComponentBehavior
             IPort NewFactory()
             {
                 var port = factory();
-                var portType = port.GetType();
-                var portTransportType = portType.GetGenericArguments()[0];
                 return port;
             }
             newFactories.Add(NewFactory);
