@@ -16,7 +16,10 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
-        var bridgeConfiguration = Bridge.Between<RabbitMQTransport>("Left", t => t.Configure()).And<MsmqTransport>("Right");
+        var bridgeConfiguration = Bridge
+            .Between<TestTransport>("Left", t => t.ConfigureNativePubSubBrokerB())
+            .And<TestTransport>("Right", t => t.ConfigureNoNativePubSubBrokerA());
+
         bridgeConfiguration.LimitMessageProcessingConcurrencyTo(1); //To ensure when tracer arrives the subscribe request has already been processed.
 
         var result = await Scenario.Define<Context>()
@@ -54,7 +57,7 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<RabbitMQTransport>().Configure();
+                c.UseTransport<TestTransport>().ConfigureNativePubSubBrokerB();
             });
         }
 
@@ -89,7 +92,7 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
             EndpointSetup<DefaultServer>(c =>
             {
                 c.DisableFeature<AutoSubscribe>();
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var bridge = routing.ConnectToBridge("Right");
                 bridge.RegisterPublisher(typeof(MyBaseEvent1), PublisherEndpointName);
                 bridge.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
@@ -120,7 +123,7 @@ public class When_publishing_from_native_pubsub_endpoint : NServiceBusAcceptance
             EndpointSetup<DefaultServer>(c =>
             {
                 c.DisableFeature<AutoSubscribe>();
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var bridge = routing.ConnectToBridge("Right");
                 bridge.RegisterPublisher(typeof(MyDerivedEvent1), PublisherEndpointName);
                 bridge.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);

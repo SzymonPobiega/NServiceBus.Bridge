@@ -14,8 +14,8 @@ public class When_publishing_via_double_unicast_bridge : NServiceBusAcceptanceTe
     [Test]
     public async Task It_should_deliver_the_message()
     {
-        var leftBridge = Bridge.Between<MsmqTransport>("Left").And<MsmqTransport>("MiddleLeft");
-        var rightBridge = Bridge.Between<MsmqTransport>("Right").And<MsmqTransport>("MiddleRight");
+        var leftBridge = Bridge.Between<TestTransport>("Left", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("MiddleLeft", t => t.ConfigureNoNativePubSubBrokerA());
+        var rightBridge = Bridge.Between<TestTransport>("Right", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("MiddleRight", t => t.ConfigureNoNativePubSubBrokerA());
         rightBridge.InterceptForwarding((queue, message, dispatch, forward) =>
         {
             return forward((messages, transaction, context) =>
@@ -53,7 +53,7 @@ public class When_publishing_via_double_unicast_bridge : NServiceBusAcceptanceTe
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>().Configure();
+                c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -69,7 +69,7 @@ public class When_publishing_via_double_unicast_bridge : NServiceBusAcceptanceTe
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

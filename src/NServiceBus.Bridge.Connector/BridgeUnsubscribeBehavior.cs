@@ -24,8 +24,7 @@ class BridgeUnsubscribeBehavior : Behavior<IUnsubscribeContext>
     public override async Task Invoke(IUnsubscribeContext context, Func<Task> next)
     {
         var eventType = context.EventType;
-        string publisherEndpoint;
-        if (publisherTable.TryGetValue(eventType, out publisherEndpoint))
+        if (publisherTable.TryGetValue(eventType, out var publisherEndpoint))
         {
             Logger.Debug($"Sending unsubscribe request for {eventType.AssemblyQualifiedName} to bridge queue {bridgeAddress} to be forwarded to {publisherEndpoint}");
 

@@ -9,10 +9,4 @@ public class ConfigureEndpointInMemoryPersistence
         configuration.UsePersistence<InMemoryPersistence>();
         return Task.FromResult(0);
     }
-
-    public Task Cleanup()
-    {
-        // Nothing required for in-memory persistence
-        return Task.FromResult(0);
-    }
 }

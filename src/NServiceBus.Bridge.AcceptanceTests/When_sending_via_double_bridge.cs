@@ -13,10 +13,10 @@ public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
     [Test]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
-        var leftBridge = Bridge.Between<MsmqTransport>("LeftMSMQ").And<RabbitMQTransport>("LeftRabbit", ext => ext.Configure());
-        leftBridge.Forwarding.ForwardTo(typeof(MyRequest).FullName, "RightRabbit");
+        var leftBridge = Bridge.Between<TestTransport>("LeftA", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("LeftB", ext => ext.ConfigureNativePubSubBrokerB());
+        leftBridge.Forwarding.ForwardTo(typeof(MyRequest).FullName, "RightB");
 
-        var rightBridge = Bridge.Between<MsmqTransport>("RightMSMQ").And<RabbitMQTransport>("RightRabbit", ext => ext.Configure());
+        var rightBridge = Bridge.Between<TestTransport>("RightA", t => t.ConfigureNoNativePubSubBrokerA()).And<TestTransport>("RightB", ext => ext.ConfigureNativePubSubBrokerB());
 
         var result = await Scenario.Define<Context>()
             .With(leftBridge)
@@ -42,8 +42,8 @@ public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
-                var bridge = routing.ConnectToBridge("LeftMSMQ");
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
+                var bridge = routing.ConnectToBridge("LeftA");
                 bridge.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Receiver)));
             });
         }
@@ -72,7 +72,7 @@ public class When_sending_via_double_bridge : NServiceBusAcceptanceTest
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for reply
-                c.UseTransport<MsmqTransport>().Configure();
+                c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA();
             });
         }
 

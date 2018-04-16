@@ -20,14 +20,14 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
             {
                 var cfg = new SwitchConfiguration();
 
-                //Publisher - RabbitMQ. Limit concurrency to ensure when tracer arrives the subscribe request has already been processed.
-                cfg.AddPort<RabbitMQTransport>("Port1", t => t.Configure()).LimitMessageProcessingConcurrencyTo(1);
+                //Publisher - Broker B. Limit concurrency to ensure when tracer arrives the subscribe request has already been processed.
+                cfg.AddPort<TestTransport>("Port1", t => t.ConfigureNativePubSubBrokerB()).LimitMessageProcessingConcurrencyTo(1);
 
-                //BaseEventSubscriber - MSMQ
-                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                //BaseEventSubscriber - Broker A
+                cfg.AddPort<TestTransport>("Port2", t => t.ConfigureNoNativePubSubBrokerA()).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
 
-                //DerivedEventSubscriber - RabbitMQ
-                cfg.AddPort<RabbitMQTransport>("Port3", t => t.Configure());
+                //DerivedEventSubscriber - Broker C`
+                cfg.AddPort<TestTransport>("Port3", t => t.ConfigureNativePubSubBrokerC());
 
                 cfg.PortTable[Conventions.EndpointNamingConvention(typeof(Publisher))] = "Port1";
                 return cfg;
@@ -65,7 +65,7 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<RabbitMQTransport>().Configure();
+                c.UseTransport<TestTransport>().ConfigureNativePubSubBrokerB();
             });
         }
 
@@ -99,7 +99,7 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Configure().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var bridge = routing.ConnectToBridge("Port2");
                 bridge.RegisterPublisher(typeof(MyBaseEvent3), Conventions.EndpointNamingConvention(typeof(Publisher)));
                 bridge.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
@@ -129,7 +129,7 @@ public class When_subscribing_from_native_and_message_driven_endpoints : NServic
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<RabbitMQTransport>().Configure()
+                var routing = c.UseTransport<TestTransport>().ConfigureNativePubSubBrokerC()
                     .Routing();
 
                 var bridge = routing.ConnectToBridge("Port3");

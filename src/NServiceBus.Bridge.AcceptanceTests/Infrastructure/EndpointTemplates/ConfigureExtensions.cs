@@ -10,7 +10,6 @@
         {
             var persistenceConfiguration = new ConfigureEndpointInMemoryPersistence();
             await persistenceConfiguration.Configure(endpointCustomizationConfiguration.EndpointName, config, runDescriptor.Settings, endpointCustomizationConfiguration.PublisherMetadata);
-            runDescriptor.OnTestCompleted(_ => persistenceConfiguration.Cleanup());
         }
 
         public static void RegisterComponentsAndInheritanceHierarchy(this EndpointConfiguration builder, RunDescriptor runDescriptor)

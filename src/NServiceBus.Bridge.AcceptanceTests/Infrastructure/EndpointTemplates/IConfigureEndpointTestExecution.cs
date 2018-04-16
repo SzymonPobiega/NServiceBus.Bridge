@@ -24,7 +24,7 @@
 
         /// <summary>
         /// Gives the transport/persistence a chance to clean up after the test is complete. Implementations of this class may store
-        /// private variables during Configure to use during the cleanup phase.
+        /// private variables during ConfigureNoNativePubSubBrokerA to use during the cleanup phase.
         /// </summary>
         /// <returns>An async Task.</returns>
         Task Cleanup();
