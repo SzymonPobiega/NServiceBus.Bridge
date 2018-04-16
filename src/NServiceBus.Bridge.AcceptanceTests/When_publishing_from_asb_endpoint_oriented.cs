@@ -1,8 +1,10 @@
 ﻿#if NET461
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
+using Messages;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
@@ -21,16 +23,21 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
     static string PublisherEndpointName => Conventions.EndpointNamingConvention(typeof(Publisher));
 
     [Test]
-    [Explicit]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
         var bridgeConfiguration = Bridge.Between<AzureServiceBusTransport>("Left", t =>
         {
             var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
             t.ConnectionString(connString);
+            var settings = t.GetSettings();
+
+            var builder = new ConventionsBuilder(settings);
+            builder.DefiningEventsAs(x => x.Namespace == "Messages");
+            settings.Set<NServiceBus.Conventions>(builder.Conventions);
+
             var topology = t.UseEndpointOrientedTopology();
             topology.RegisterPublisher(typeof(MyAsbEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
-            var settings = t.GetSettings();
+
             var serializer = Tuple.Create(new NewtonsoftSerializer() as SerializationDefinition, new SettingsHolder());
             settings.Set("MainSerializer", serializer);
 
@@ -80,6 +87,8 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
                 var transport = c.UseTransport<AzureServiceBusTransport>();
                 transport.ConnectionString(connString);
                 transport.UseEndpointOrientedTopology();
+
+                c.Conventions().DefiningEventsAs(x => x.Namespace == "Messages");
             });
         }
 
@@ -107,10 +116,12 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
             EndpointSetup<DefaultServer>(c =>
             {
                 c.DisableFeature<AutoSubscribe>();
-                var routing = c.UseTransport<TestTransport>().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var ramp = routing.ConnectToBridge("Right");
                 ramp.RegisterPublisher(typeof(MyAsbEvent), PublisherEndpointName);
                 ramp.RouteToEndpoint(typeof(TracerMessage), PublisherEndpointName);
+
+                c.Conventions().DefiningEventsAs(x => x.Namespace == "Messages");
             });
         }
 
@@ -136,8 +147,11 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
     }
 }
 
-//Not nested because of sanitization rules
-class MyAsbEvent : IEvent
+namespace Messages
 {
+//Not nested because of sanitization rules
+    class MyAsbEvent //: IEvent
+    {
+    }
 }
 #endif
