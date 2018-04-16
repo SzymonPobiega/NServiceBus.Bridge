@@ -8,10 +8,15 @@ class RuntimeTypeGenerator
 {
     public Type GetType(string messageType)
     {
+        var knownType = Type.GetType(messageType, false);
+        if (knownType != null)
+        {
+            return knownType;
+        }
+
         var parts = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
         var nameAndNamespace = parts[0];
         var assembly = parts[1];
-
 
         ModuleBuilder moduleBuilder;
         lock (assemblies)
@@ -19,8 +24,8 @@ class RuntimeTypeGenerator
             if (!assemblies.TryGetValue(assembly, out moduleBuilder))
             {
                 var assemblyName = new AssemblyName(assembly);
-                var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.ReflectionOnly);
-                moduleBuilder = assemblyBuilder.DefineDynamicModule(assembly, assembly + ".dll");
+                var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
+                moduleBuilder = assemblyBuilder.DefineDynamicModule(assembly);
                 assemblies[assembly] = moduleBuilder;
             }
         }
@@ -38,7 +43,7 @@ class RuntimeTypeGenerator
                     var path = string.Join("+", nestedParts.Take(i + 1));
                     typeBuilder = GetNestedTypeBuilder(typeBuilder, nestedParts[i], path);
                 }
-                result = typeBuilder.CreateType();
+                result = typeBuilder.CreateTypeInfo();
                 types[messageType] = result;
             }
         }
@@ -54,7 +59,7 @@ class RuntimeTypeGenerator
 
         builder = moduleBuilder.DefineType(name, TypeAttributes.Public);
         typeBuilders[name] = builder;
-        builder.CreateType();
+        builder.CreateTypeInfo();
         return builder;
     }
 
@@ -67,7 +72,7 @@ class RuntimeTypeGenerator
 
         builder = typeBuilder.DefineNestedType(name);
         typeBuilders[path] = builder;
-        builder.CreateType();
+        builder.CreateTypeInfo();
         return builder;
     }
 

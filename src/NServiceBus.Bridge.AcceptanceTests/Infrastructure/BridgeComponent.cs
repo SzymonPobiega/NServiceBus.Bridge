@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using NServiceBus;
 using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTesting.Support;
 using NServiceBus.Bridge;
@@ -16,7 +15,7 @@ static class BridgeComponentExtensions
     {
         return scenario.WithComponent(new BridgeComponent<TLeft, TRight>(() =>
         {
-            config.UseSubscriptionPersistece<InMemoryPersistence>((e, c) => { });
+            config.UseSubscriptionPersistence(new InMemorySubscriptionStorage());
             return config;
         }));
     }
@@ -56,7 +55,7 @@ class BridgeComponent<TLeft, TRight> : IComponentBehavior
         public Runner(IBridge bridge, string name)
         {
             this.bridge = bridge;
-            this.Name = name;
+            Name = name;
         }
 
         public override Task Start(CancellationToken token)

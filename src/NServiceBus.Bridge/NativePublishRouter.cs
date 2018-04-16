@@ -7,7 +7,7 @@ using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
-class NativePublishRouter : IRouter
+class NativePublishRouter : IPublishRouter
 {
     RuntimeTypeGenerator typeGenerator;
 
@@ -16,10 +16,9 @@ class NativePublishRouter : IRouter
         this.typeGenerator = typeGenerator;
     }
 
-    public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    public Task Route(MessageContext context, IRawEndpoint dispatcher)
     {
-        string messageTypes;
-        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out messageTypes))
+        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out var messageTypes))
         {
             throw new UnforwardableMessageException("Message need to have 'NServiceBus.EnclosedMessageTypes' header in order to be routed.");
         }

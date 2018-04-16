@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AcceptanceTesting.Support
 {
+    using System;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -8,7 +9,8 @@
     /// </summary>
     public interface IConfigureEndpointTestExecution
     {
-        /// <summary>
+        Action<TransportExtensions> ConfigureTransport { get; set; }
+            /// <summary>
         /// Gives the transport/persistence a chance to configure before the test starts.
         /// </summary>
         /// <param name="endpointName">The endpoint name.</param>
@@ -22,7 +24,7 @@
 
         /// <summary>
         /// Gives the transport/persistence a chance to clean up after the test is complete. Implementations of this class may store
-        /// private variables during Configure to use during the cleanup phase.
+        /// private variables during ConfigureNoNativePubSubBrokerA to use during the cleanup phase.
         /// </summary>
         /// <returns>An async Task.</returns>
         Task Cleanup();

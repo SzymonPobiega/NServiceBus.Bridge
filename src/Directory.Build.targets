@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup>
+    <Authors>Szymon Pobiega</Authors>
+    <Company>Szymon Pobiega Consulting</Company>
+    <PackageLicenseUrl>https://github.com/SzymonPobiega/NServiceBus.Bridge/blob/master/LICENSE.md</PackageLicenseUrl>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Copyright>Copyright 2010-$([System.DateTime]::UtcNow.ToString(yyyy)) Szymon Pobiega. All rights reserved</Copyright>
+    <PackageTags>nservicebus bridge messages</PackageTags>
+    <PackageIconUrl>https://Bridge.githubusercontent.com/SzymonPobiega/NServiceBus.Bridge/master/icons/bridge.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/SzymonPobiega/NServiceBus.Bridge</PackageProjectUrl>
+    <PackageOutputPath>..\..\nugets</PackageOutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludePDBsInPackage</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="IncludePDBsInPackage" Condition="'$(IncludeBuildOutput)' != 'false'">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(OutputPath)\$(AssemblyName).pdb" PackagePath="lib/$(TargetFramework)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

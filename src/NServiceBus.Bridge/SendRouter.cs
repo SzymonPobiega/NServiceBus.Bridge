@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus;
@@ -7,42 +8,58 @@ using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
-class SendRouter : IRouter
+class SendRouter
 {
     EndpointInstances endpointInstances;
-    IDistributionPolicy distributionPolicy;
-    string localPortName;
+    RawDistributionPolicy distributionPolicy;
 
-    public SendRouter(EndpointInstances endpointInstances, IDistributionPolicy distributionPolicy, string localPortName = null)
+    public SendRouter(EndpointInstances endpointInstances, RawDistributionPolicy distributionPolicy)
     {
         this.endpointInstances = endpointInstances;
         this.distributionPolicy = distributionPolicy;
-        this.localPortName = localPortName;
     }
 
-    public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    public Task Route(MessageContext context, IRawEndpoint dispatcher, InterBridgeRoutingSettings routing, string sourcePort)
     {
-        string destinationEndpoint;
-        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out destinationEndpoint))
+        if (!context.Headers.TryGetValue(Headers.EnclosedMessageTypes, out var messageTypes))
+        {
+            throw new UnforwardableMessageException($"Sent message does not contain the '{Headers.EnclosedMessageTypes}' header.");
+        }
+        var rootType = messageTypes.Split(new [] {';'}, StringSplitOptions.RemoveEmptyEntries).First();
+        var rootTypeFullName = rootType.Split(new [] {','}, StringSplitOptions.RemoveEmptyEntries).First();
+
+        if (routing.SendRouteTable.TryGetValue(rootTypeFullName, out var nextHop))
+        {
+            return Forward(context, dispatcher, nextHop, sourcePort);
+        }
+
+        if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var destinationEndpoint))
         {
             throw new UnforwardableMessageException("Sent message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
+        return Forward(context, dispatcher, destinationEndpoint, sourcePort);
+    }
+
+    Task Forward(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint, string sourcePort)
+    {
+        var forwardedHeaders = new Dictionary<string, string>(context.Headers);
+
         var address = SelectDestinationAddress(destinationEndpoint, i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)));
 
-        if (context.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToHeader)
-            && context.Headers.TryGetValue(Headers.CorrelationId, out var correlationId))
+        if (forwardedHeaders.TryGetValue(Headers.ReplyToAddress, out var replyToHeader)
+            && forwardedHeaders.TryGetValue(Headers.CorrelationId, out var correlationId))
         {
             // pipe-separated TLV format
             var newCorrelationId = $"id|{correlationId.Length}|{correlationId}|reply-to|{replyToHeader.Length}|{replyToHeader}";
-            if (localPortName != null)
+            if (sourcePort != null)
             {
-                newCorrelationId += $"|port|{localPortName.Length}|{localPortName}";
+                newCorrelationId += $"|port|{sourcePort.Length}|{sourcePort}";
             }
-            context.Headers[Headers.CorrelationId] = newCorrelationId;
+            forwardedHeaders[Headers.CorrelationId] = newCorrelationId;
         }
-        context.Headers[Headers.ReplyToAddress] = dispatcher.TransportAddress;
+        forwardedHeaders[Headers.ReplyToAddress] = dispatcher.TransportAddress;
 
-        var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);
+        var outgoingMessage = new OutgoingMessage(context.MessageId, forwardedHeaders, context.Body);
         var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(address));
         return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);
     }
@@ -50,7 +67,7 @@ class SendRouter : IRouter
     string SelectDestinationAddress(string endpoint, Func<EndpointInstance, string> resolveTransportAddress)
     {
         var candidates = endpointInstances.FindInstances(endpoint).Select(resolveTransportAddress).ToArray();
-        var selected = distributionPolicy.GetDistributionStrategy(endpoint, DistributionStrategyScope.Send).SelectReceiver(candidates);
+        var selected = distributionPolicy.GetDistributionStrategy(endpoint, DistributionStrategyScope.Send).SelectDestination(candidates);
         return selected;
     }
 }
