@@ -2,13 +2,11 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
     using AcceptanceTesting.Customization;
     using AcceptanceTesting.Support;
     using Configuration.AdvancedExtensibility;
     using Features;
-    using Transport;
 
     public class DefaultServer : IEndpointSetupTemplate
     {
