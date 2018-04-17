@@ -28,7 +28,7 @@ public class When_publishing_via_double_unicast_bridge : NServiceBusAcceptanceTe
             });
         });
         rightBridge.Forwarding.RegisterPublisher(typeof(MyEvent).FullName, "MiddleLeft");
-
+        
         var result = await Scenario.Define<Context>()
             .With(leftBridge)
             .With(rightBridge)

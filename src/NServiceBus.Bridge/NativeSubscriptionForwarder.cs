@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus;
@@ -26,29 +27,38 @@ class NativeSubscriptionForwarder : SubscriptionForwarder
         this.endpointInstances = endpointInstances;
     }
 
-    public override async Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override async Task ForwardSubscribe(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         var type = typeGenerator.GetType(messageType);
         await subscriptionManager.Subscribe(type, new ContextBag()).ConfigureAwait(false);
-        await Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher, forwarding).ConfigureAwait(false);
+        await Send(context, subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher, forwarding).ConfigureAwait(false);
     }
 
-    public override async Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override async Task ForwardUnsubscribe(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         var type = typeGenerator.GetType(messageType);
         await subscriptionManager.Unsubscribe(type, new ContextBag()).ConfigureAwait(false);
-        await Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Unsubscribe, dispatcher, forwarding).ConfigureAwait(false);
+        await Send(context,subscriber, publisherEndpoint, messageType, MessageIntentEnum.Unsubscribe, dispatcher, forwarding).ConfigureAwait(false);
     }
 
-    async Task Send(Subscriber subscriber, string publisherEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    async Task Send(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         var typeFullName = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).First();
 
-        if (!forwarding.PublisherTable.TryGetValue(typeFullName, out var nextHopEndpoint))
+        if (!forwarding.TryGetDestination(context, typeFullName, out var nextHops))
         {
             return;
         }
 
+        var ops = nextHops
+            .SelectMany(h => CreateOperations(subscriber, publisherEndpoint, messageType, intent, dispatcher, h))
+            .ToArray();
+
+        await dispatcher.Dispatch(new TransportOperations(ops), new TransportTransaction(), new ContextBag()).ConfigureAwait(false);
+    }
+
+    IEnumerable<TransportOperation> CreateOperations(Subscriber subscriber, string publisherEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher, string nextHop)
+    {
         var subscriptionMessage = ControlMessageFactory.Create(intent);
         if (publisherEndpoint != null)
         {
@@ -61,16 +71,17 @@ class NativeSubscriptionForwarder : SubscriptionForwarder
         subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
         subscriptionMessage.Headers[Headers.NServiceBusVersion] = "6.3.1"; //The code has been copied from 6.3.1
 
-        var publisherInstances = endpointInstances.FindInstances(nextHopEndpoint);
+        var publisherInstances = endpointInstances.FindInstances(nextHop);
         var publisherAddresses = publisherInstances.Select(i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i))).ToArray();
+
+
         foreach (var publisherAddress in publisherAddresses)
         {
             Logger.Debug(
                 $"Sending {intent} request for {messageType} to {publisherAddress} on behalf of {subscriber.TransportAddress}.");
 
             var transportOperation = new TransportOperation(subscriptionMessage, new UnicastAddressTag(publisherAddress));
-            await dispatcher.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(),
-                new ContextBag()).ConfigureAwait(false);
+            yield return transportOperation;
         }
     }
 }

@@ -30,6 +30,7 @@ class BridgeRoutingFeature : Feature
         var publisherAddress = PublisherAddress.CreateFromPhysicalAddresses(settings.BridgeAddress);
         publishers.AddOrReplacePublishers("Bridge", settings.PublisherTable.Select(kvp => new PublisherTableEntry(kvp.Key, publisherAddress)).ToList());
 
+        context.Pipeline.Register(new RouteSiteMessagesToBridgeBehavior(settings.BridgeAddress), "Routes messages sent to sites to the bridge.");
         context.Pipeline.Register(new RoutingHeadersBehavior(settings.SendRouteTable, settings.PortTable), "Sets the ultimate destination endpoint on the outgoing messages.");
         context.Pipeline.Register(b => new BridgeSubscribeBehavior(subscriberAddress, context.Settings.EndpointName(), settings.BridgeAddress, b.Build<IDispatchMessages>(), settings.PublisherTable, settings.PortTable, nativePubSub), 
             "Dispatches the subscribe request to the bridge.");
