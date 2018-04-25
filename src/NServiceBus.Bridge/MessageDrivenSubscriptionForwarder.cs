@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus;
@@ -24,23 +25,47 @@ class MessageDrivenSubscriptionForwarder : SubscriptionForwarder
         this.endpointInstances = endpointInstances;
     }
 
-    public override Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override Task ForwardSubscribe(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
-        return Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher, forwarding);
+        return Send(context, subscriber, publisherEndpoint, messageType, MessageIntentEnum.Subscribe, dispatcher, forwarding);
     }
 
-    public override Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    public override Task ForwardUnsubscribe(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
-        return Send(subscriber, publisherEndpoint, messageType, MessageIntentEnum.Unsubscribe, dispatcher, forwarding);
+        return Send(context, subscriber, publisherEndpoint, messageType, MessageIntentEnum.Unsubscribe, dispatcher, forwarding);
     }
 
-    async Task Send(Subscriber subscriber, string publisherEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
+    async Task Send(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding)
     {
         if (publisherEndpoint == null)
         {
             throw new UnforwardableMessageException("Subscription message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
+        var typeFullName = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).First();
 
+        TransportOperation[] ops;
+        if (forwarding.TryGetDestination(context, typeFullName, out var nextHops))
+        {
+            ops = nextHops
+                .SelectMany(h => CreateOperation(subscriber, h, messageType, intent, dispatcher))
+                .Select(o => SetDestinationEndpoint(o, publisherEndpoint))
+                .ToArray();
+        }
+        else
+        {
+            ops = CreateOperation(subscriber, publisherEndpoint, messageType, intent, dispatcher).ToArray();
+        }
+        await dispatcher.Dispatch(new TransportOperations(ops), new TransportTransaction(), new ContextBag()).ConfigureAwait(false);
+    }
+
+    static TransportOperation SetDestinationEndpoint(TransportOperation op, string publisherEndpoint)
+    {
+        op.Message.Headers["NServiceBus.Bridge.DestinationEndpoint"] = publisherEndpoint;
+        return op;
+    }
+
+    IEnumerable<TransportOperation> CreateOperation(Subscriber subscriber, string nextHopEndpoint, string messageType, MessageIntentEnum intent, IRawEndpoint dispatcher)
+    {
         var subscriptionMessage = ControlMessageFactory.Create(intent);
 
         subscriptionMessage.Headers[Headers.SubscriptionMessageType] = messageType;
@@ -50,17 +75,6 @@ class MessageDrivenSubscriptionForwarder : SubscriptionForwarder
         subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
         subscriptionMessage.Headers[Headers.NServiceBusVersion] = "6.3.1"; //The code has been copied from 6.3.1
 
-        var typeFullName = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).First();
-
-        if (forwarding.PublisherTable.TryGetValue(typeFullName, out var nextHopEndpoint))
-        {
-            subscriptionMessage.Headers["NServiceBus.Bridge.DestinationEndpoint"] = publisherEndpoint;
-        }
-        else
-        {
-            nextHopEndpoint = publisherEndpoint;
-        }
-
         var publisherInstances = endpointInstances.FindInstances(nextHopEndpoint);
         var publisherAddresses = publisherInstances.Select(i => dispatcher.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i))).ToArray();
         foreach (var publisherAddress in publisherAddresses)
@@ -69,8 +83,7 @@ class MessageDrivenSubscriptionForwarder : SubscriptionForwarder
                 $"Sending {intent} request for {messageType} to {publisherAddress} on behalf of {subscriber.TransportAddress}.");
 
             var transportOperation = new TransportOperation(subscriptionMessage, new UnicastAddressTag(publisherAddress));
-            await dispatcher.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(),
-                new ContextBag()).ConfigureAwait(false);
+            yield return transportOperation;
         }
     }
 }

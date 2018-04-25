@@ -42,11 +42,11 @@ abstract class SubscriptionForwarder
         var subscriber = new Subscriber(subscriberAddress, subscriberEndpoint);
         if (intent == MessageIntentEnum.Subscribe)
         {
-            await ForwardSubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
+            await ForwardSubscribe(context, subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
         }
         else
         {
-            await ForwardUnsubscribe(subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
+            await ForwardUnsubscribe(context, subscriber, publisherEndpoint, messageTypeString, dispatcher, forwarding).ConfigureAwait(false);
         }
     }
 
@@ -61,6 +61,6 @@ abstract class SubscriptionForwarder
         return message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress) ? replyToAddress : null;
     }
 
-    public abstract Task ForwardSubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding);
-    public abstract Task ForwardUnsubscribe(Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding);
+    public abstract Task ForwardSubscribe(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding);
+    public abstract Task ForwardUnsubscribe(MessageContext context, Subscriber subscriber, string publisherEndpoint, string messageType, IRawEndpoint dispatcher, InterBridgeRoutingSettings forwarding);
 }

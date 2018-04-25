@@ -28,19 +28,22 @@ class SendRouter
         var rootType = messageTypes.Split(new [] {';'}, StringSplitOptions.RemoveEmptyEntries).First();
         var rootTypeFullName = rootType.Split(new [] {','}, StringSplitOptions.RemoveEmptyEntries).First();
 
-        if (routing.SendRouteTable.TryGetValue(rootTypeFullName, out var nextHop))
+        if (routing.TryGetDestination(context, rootTypeFullName, out var nextHops))
         {
-            return Forward(context, dispatcher, nextHop, sourcePort);
+            var ops = nextHops.Select(h => CreateTransportOperation(context, dispatcher, h, sourcePort)).ToArray();
+            return dispatcher.Dispatch(new TransportOperations(ops), context.TransportTransaction, context.Extensions);
         }
 
         if (!context.Headers.TryGetValue("NServiceBus.Bridge.DestinationEndpoint", out var destinationEndpoint))
         {
             throw new UnforwardableMessageException("Sent message does not contain the 'NServiceBus.Bridge.DestinationEndpoint' header.");
         }
-        return Forward(context, dispatcher, destinationEndpoint, sourcePort);
+
+        var operation = CreateTransportOperation(context, dispatcher, destinationEndpoint, sourcePort);
+        return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);
     }
 
-    Task Forward(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint, string sourcePort)
+    TransportOperation CreateTransportOperation(MessageContext context, IRawEndpoint dispatcher, string destinationEndpoint, string sourcePort)
     {
         var forwardedHeaders = new Dictionary<string, string>(context.Headers);
 
@@ -61,7 +64,7 @@ class SendRouter
 
         var outgoingMessage = new OutgoingMessage(context.MessageId, forwardedHeaders, context.Body);
         var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(address));
-        return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);
+        return operation;
     }
 
     string SelectDestinationAddress(string endpoint, Func<EndpointInstance, string> resolveTransportAddress)
