@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if NET461
+using System;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus;
@@ -6,6 +7,9 @@ using NServiceBus.AcceptanceTesting;
 using NServiceBus.AcceptanceTests;
 using NServiceBus.AcceptanceTests.EndpointTemplates;
 using NServiceBus.Bridge;
+using NServiceBus.Configuration.AdvancedExtensibility;
+using NServiceBus.Serialization;
+using NServiceBus.Settings;
 using NUnit.Framework;
 using Conventions = NServiceBus.AcceptanceTesting.Customization.Conventions;
 
@@ -15,17 +19,22 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
     [Test]
     public async Task Should_deliver_the_reply_without_the_need_to_configure_the_bridge()
     {
-        var bridgeConfig = Bridge.Between<MsmqTransport>("Left").And<AzureServiceBusTransport>("Right", extensions =>
+        var bridgeConfig = Bridge.Between<TestTransport>("Left", t => t.ConfigureNoNativePubSubBrokerA()).And<AzureServiceBusTransport>("Right", extensions =>
         {
             var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
             extensions.ConnectionString(connString);
             extensions.UseForwardingTopology();
+            var settings = extensions.GetSettings();
+            var serializer = Tuple.Create(new NewtonsoftSerializer() as SerializationDefinition, new SettingsHolder());
+            settings.Set("MainSerializer", serializer);
         });
-        bridgeConfig.InterceptForawrding((queue, message, method) =>
+        bridgeConfig.CircuitBreakerThreshold = int.MaxValue;
+        bridgeConfig.DelayedRetries = 0;
+        bridgeConfig.InterceptForwarding((queue, message, dispatch, forward) =>
         {
             using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
             {
-                return method();
+                return forward(dispatch);
             }
         });
         var result = await Scenario.Define<Context>()
@@ -51,7 +60,7 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var ramp = routing.ConnectToBridge("Left");
                 ramp.RouteToEndpoint(typeof(MyRequest), Conventions.EndpointNamingConvention(typeof(Receiver)));
             });
@@ -112,3 +121,4 @@ public class When_replying_to_a_message_with_asb : NServiceBusAcceptanceTest
     {
     }
 }
+#endif

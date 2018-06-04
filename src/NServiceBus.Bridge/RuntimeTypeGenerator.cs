@@ -4,30 +4,12 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-public class RuntimeTypeGenerator
+class RuntimeTypeGenerator
 {
-    public void RegisterKnownType(Type knownType)
-    {
-        if (knownType == null)
-        {
-            throw new ArgumentNullException(nameof(knownType));
-        }
-        if (knownType.AssemblyQualifiedName == null)
-        {
-            throw new ArgumentException("Name of type is null", nameof(knownType));
-        }
-        knownTypes[knownType.AssemblyQualifiedName] = knownType;
-    }
-
-    internal Type GetType(string messageType)
+    public Type GetType(string messageType)
     {
         var knownType = Type.GetType(messageType, false);
         if (knownType != null)
-        {
-            return knownType;
-        }
-
-        if (knownTypes.TryGetValue(messageType, out knownType))
         {
             return knownType;
         }
@@ -42,8 +24,8 @@ public class RuntimeTypeGenerator
             if (!assemblies.TryGetValue(assembly, out moduleBuilder))
             {
                 var assemblyName = new AssemblyName(assembly);
-                var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.ReflectionOnly);
-                moduleBuilder = assemblyBuilder.DefineDynamicModule(assembly, assembly + ".dll");
+                var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
+                moduleBuilder = assemblyBuilder.DefineDynamicModule(assembly);
                 assemblies[assembly] = moduleBuilder;
             }
         }
@@ -61,7 +43,7 @@ public class RuntimeTypeGenerator
                     var path = string.Join("+", nestedParts.Take(i + 1));
                     typeBuilder = GetNestedTypeBuilder(typeBuilder, nestedParts[i], path);
                 }
-                result = typeBuilder.CreateType();
+                result = typeBuilder.CreateTypeInfo();
                 types[messageType] = result;
             }
         }
@@ -77,7 +59,7 @@ public class RuntimeTypeGenerator
 
         builder = moduleBuilder.DefineType(name, TypeAttributes.Public);
         typeBuilders[name] = builder;
-        builder.CreateType();
+        builder.CreateTypeInfo();
         return builder;
     }
 
@@ -90,12 +72,11 @@ public class RuntimeTypeGenerator
 
         builder = typeBuilder.DefineNestedType(name);
         typeBuilders[path] = builder;
-        builder.CreateType();
+        builder.CreateTypeInfo();
         return builder;
     }
 
     Dictionary<string, ModuleBuilder> assemblies = new Dictionary<string, ModuleBuilder>();
     Dictionary<string, Type> types = new Dictionary<string, Type>();
-    Dictionary<string, Type> knownTypes = new Dictionary<string, Type>();
     Dictionary<string, TypeBuilder> typeBuilders = new Dictionary<string, TypeBuilder>();
 }

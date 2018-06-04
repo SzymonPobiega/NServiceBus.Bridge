@@ -1,16 +1,19 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Bridge;
 using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
-class ReplyRouter : IRouter
+class ReplyRouter
 {
     public Task Route(MessageContext context, MessageIntentEnum intent, IRawEndpoint dispatcher)
     {
+        var forwardedHeaders = new Dictionary<string, string>(context.Headers);
+
         string replyTo = null;
-        if (!context.Headers.TryGetValue(Headers.CorrelationId, out var correlationId))
+        if (!forwardedHeaders.TryGetValue(Headers.CorrelationId, out var correlationId))
         {
             throw new UnforwardableMessageException($"The reply has to contain a '{Headers.CorrelationId}' header set by the bridge ramp when sending out the initial message.");
         }
@@ -21,6 +24,10 @@ class ReplyRouter : IRouter
             {
                 replyTo = v;
             }
+            if (t == "id")
+            {
+                forwardedHeaders[Headers.CorrelationId] = v;
+            }
         });
 
         if (replyTo == null)
@@ -28,7 +35,7 @@ class ReplyRouter : IRouter
             throw new UnforwardableMessageException("The reply message does not contain \'reply-to\' correlation parameter required to route the message.");
         }
 
-        var outgoingMessage = new OutgoingMessage(context.MessageId, context.Headers, context.Body);
+        var outgoingMessage = new OutgoingMessage(context.MessageId, forwardedHeaders, context.Body);
         var operation = new TransportOperation(outgoingMessage, new UnicastAddressTag(replyTo));
         return dispatcher.Dispatch(new TransportOperations(operation), context.TransportTransaction, context.Extensions);
     }

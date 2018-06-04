@@ -18,9 +18,9 @@ public class When_publishing_from_message_driven_pubsub_endpoint_via_switch : NS
             .WithComponent(new SwitchComponent(() =>
             {
                 var cfg = new SwitchConfiguration();
-                cfg.AddPort<MsmqTransport>("Port1", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
-                cfg.AddPort<MsmqTransport>("Port2", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
-                cfg.AddPort<MsmqTransport>("Port3", t => { }).UseSubscriptionPersistece<InMemoryPersistence>(c => { });
+                cfg.AddPort<TestTransport>("Port1", t => { t.ConfigureNoNativePubSubBrokerA(); }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<TestTransport>("Port2", t => { t.ConfigureNoNativePubSubBrokerA(); }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
+                cfg.AddPort<TestTransport>("Port3", t => { t.ConfigureNoNativePubSubBrokerA(); }).UseSubscriptionPersistence(new InMemorySubscriptionStorage());
 
                 cfg.PortTable[Conventions.EndpointNamingConvention(typeof(Publisher))] = "Port1";
                 return cfg;
@@ -50,7 +50,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint_via_switch : NS
             EndpointSetup<DefaultServer>(c =>
             {
                 //No bridge configuration needed for publisher
-                c.UseTransport<MsmqTransport>();
+                c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA();
 
                 c.OnEndpointSubscribed<Context>((args, context) =>
                 {
@@ -73,7 +73,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint_via_switch : NS
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var ramp = routing.ConnectToBridge("Port2");
                 ramp.RegisterPublisher(typeof(MyBaseEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });
@@ -102,7 +102,7 @@ public class When_publishing_from_message_driven_pubsub_endpoint_via_switch : NS
         {
             EndpointSetup<DefaultServer>(c =>
             {
-                var routing = c.UseTransport<MsmqTransport>().Routing();
+                var routing = c.UseTransport<TestTransport>().ConfigureNoNativePubSubBrokerA().Routing();
                 var ramp = routing.ConnectToBridge("Port3");
                 ramp.RegisterPublisher(typeof(MyDerivedEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
             });

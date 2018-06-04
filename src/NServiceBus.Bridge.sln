@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.14
+VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Bridge", "NServiceBus.Bridge\NServiceBus.Bridge.csproj", "{6307EF93-26B0-4E6C-BA94-85B1DCDCFA07}"
 EndProject
@@ -10,6 +10,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Bridge.AcceptanceTests", "NServiceBus.Bridge.AcceptanceTests\NServiceBus.Bridge.AcceptanceTests.csproj", "{0D2C045B-B55B-4738-B580-58F259690DF0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Bridge.Connector", "NServiceBus.Bridge.Connector\NServiceBus.Bridge.Connector.csproj", "{27325DEC-0BD0-4260-84B5-E0F3D6FCA519}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2FC95206-1B2A-4F33-9797-8AA059204D2A}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.targets = Directory.Build.targets
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,5 +41,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F146A5AC-8618-4967-A758-8FB3980BC90F}
 	EndGlobalSection
 EndGlobal
