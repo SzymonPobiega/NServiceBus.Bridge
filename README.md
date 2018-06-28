@@ -2,7 +2,7 @@
 
 # NServiceBus.Bridge
 
-A bridge that can connect endpoints using different NServiceBus transports
+A bridge that can connect endpoints using different NServiceBus transports. The NServiceBus.Bridge is deprecated and won't be developed. For new projects use [NServiceBus.Router](https://github.com/SzymonPobiega/NServiceBus.Router) instead. The [upgrade guide](https://docs.particular.net/nservicebus/bridge/bridge-router) details the process of upgrading from Bridge 2 to Router 2.
 
 ## Icon
 
