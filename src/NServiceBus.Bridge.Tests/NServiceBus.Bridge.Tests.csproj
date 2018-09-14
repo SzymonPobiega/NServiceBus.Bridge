@@ -11,4 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NServiceBus.Bridge\NServiceBus.Bridge.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Messaging" />
+  </ItemGroup>
 </Project>
