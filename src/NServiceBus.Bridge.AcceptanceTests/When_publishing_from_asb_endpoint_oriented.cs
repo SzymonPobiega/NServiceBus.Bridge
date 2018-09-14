@@ -18,28 +18,13 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
     [Test]
     public async Task It_should_deliver_the_message_to_both_subscribers()
     {
-        var bridgeConfiguration = Bridge.Between<AzureServiceBusTransport>("Left", t =>
-        {
-            var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
-            t.ConnectionString(connString);
-            var topology = t.UseEndpointOrientedTopology();
-            topology.RegisterPublisher(typeof(MyAsbEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
 
-        }).And<MsmqTransport>("Right");
-
-        bridgeConfiguration.TypeGenerator.RegisterKnownType(typeof(MyAsbEvent));
-        bridgeConfiguration.InterceptForawrding(async (queue, message, dispatch) =>
-        {
-            using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
-            {
-                await dispatch();
-            }
-        });
-
-        bridgeConfiguration.LimitMessageProcessingConcurrencyTo(1); //To ensure when tracer arrives the subscribe request has already been processed.
+        var resubscriberComponent = new ResubscriberComponent("Right");
+        var bridgeConfiguration = PrepareBridgeConfiguration(resubscriberComponent);
 
         var result = await Scenario.Define<Context>()
             .With(bridgeConfiguration)
+            .WithComponent(resubscriberComponent)
             .WithEndpoint<Publisher>(c => c.When(x => x.EventSubscribed, s => s.Publish(new MyAsbEvent())))
             .WithEndpoint<Subscriber>(c => c.When(async s =>
             {
@@ -50,6 +35,40 @@ public class When_publishing_from_asb_endpoint_oriented : NServiceBusAcceptanceT
             .Run();
 
         Assert.IsTrue(result.EventDelivered);
+        Console.WriteLine("Restarting");
+
+        resubscriberComponent = new ResubscriberComponent("Right");
+        bridgeConfiguration = PrepareBridgeConfiguration(resubscriberComponent);
+
+        //No need to subscribe again. The subscription should have been created
+        result = await Scenario.Define<Context>()
+            .With(bridgeConfiguration)
+            .WithComponent(resubscriberComponent)
+            .WithEndpoint<Publisher>(c => c.When(x => x.EndpointsStarted, s => s.Publish(new MyAsbEvent())))
+            .WithEndpoint<Subscriber>()
+            .Done(c => c.EventDelivered)
+            .Run();
+
+        Assert.IsTrue(result.EventDelivered);
+    }
+
+    static BridgeConfiguration<AzureServiceBusTransport, MsmqTransport> PrepareBridgeConfiguration(ResubscriberComponent resubscriber)
+    {
+        var bridgeConfiguration = Bridge.Between<AzureServiceBusTransport>("Left", t =>
+        {
+            var connString = Environment.GetEnvironmentVariable("AzureServiceBus.ConnectionString");
+            t.ConnectionString(connString);
+            t.Transactions(TransportTransactionMode.ReceiveOnly);
+            var topology = t.UseEndpointOrientedTopology();
+            topology.RegisterPublisher(typeof(MyAsbEvent), Conventions.EndpointNamingConvention(typeof(Publisher)));
+        }).And<MsmqTransport>("Right", t =>
+        {
+            t.Transactions(TransportTransactionMode.ReceiveOnly);
+        });
+        bridgeConfiguration.InterceptForawrding(resubscriber.InterceptMessageForwarding);
+        bridgeConfiguration.TypeGenerator.RegisterKnownType(typeof(MyAsbEvent));
+        bridgeConfiguration.LimitMessageProcessingConcurrencyTo(1); //To ensure when tracer arrives the subscribe request has already been processed.
+        return bridgeConfiguration;
     }
 
     class Context : ScenarioContext
