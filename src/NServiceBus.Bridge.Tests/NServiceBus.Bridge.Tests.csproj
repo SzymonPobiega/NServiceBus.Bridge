@@ -5,8 +5,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.7.*" />
+    <PackageReference Include="NServiceBus.Transport.Msmq" Version="1.*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NServiceBus.Bridge\NServiceBus.Bridge.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Messaging" />
   </ItemGroup>
 </Project>
