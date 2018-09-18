@@ -161,7 +161,7 @@
             {
                 if (cacheKey.Contains(keyPart))
                 {
-                    cache.TryRemove(cacheKey, out CacheItem _);
+                    cache.TryRemove(cacheKey, out var _);
                 }
             }
         }
