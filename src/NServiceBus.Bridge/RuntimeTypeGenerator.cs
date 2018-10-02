@@ -16,19 +16,22 @@ public class RuntimeTypeGenerator
         {
             throw new ArgumentException("Name of type is null", nameof(knownType));
         }
-        knownTypes[knownType.AssemblyQualifiedName] = knownType;
+
+        var key = $"{knownType.FullName}, {knownType.Assembly.GetName().Name}"; //Do not include version number
+        knownTypes[key] = knownType;
     }
 
     internal Type GetType(string messageType)
     {
-        if (knownTypes.TryGetValue(messageType, out var knownType))
+        var parts = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+        var nameAndNamespace = parts[0].Trim();
+        var assembly = parts[1].Trim();
+
+        var key = $"{nameAndNamespace}, {assembly}"; //Do not include version number
+        if (knownTypes.TryGetValue(key, out var knownType))
         {
             return knownType;
         }
-
-        var parts = messageType.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-        var nameAndNamespace = parts[0];
-        var assembly = parts[1];
 
         ModuleBuilder moduleBuilder;
         lock (assemblies)
